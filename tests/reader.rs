@@ -27,11 +27,11 @@ fn test_reader() {
         step += 1;
 
         match reader.next().unwrap() {
-            IniEvent::StartSection(ref name) => {
+            IniEvent::StartSection(name) => {
                 start_section_count += 1;
                 match step {
-                    1 => assert_eq!(*name, "section-A"),
-                    5 => assert_eq!(*name, "section-B"),
+                    1 => assert_eq!(name, "section-A"),
+                    5 => assert_eq!(name, "section-B"),
                     _ => unreachable!(),
                 };
             },
@@ -39,9 +39,9 @@ fn test_reader() {
                 end_section_count += 1;
                 assert!(step == 4);
             },
-            IniEvent::Key(ref key, ref value) => {
+            IniEvent::Property(key, value) => {
                 key_count += 1;
-                println!("Key({:?}, {:?})", key, value);
+                println!("Property({:?}, {:?})", key, value);
             },
             IniEvent::EndDocument => {
                 end_document_count += 1;

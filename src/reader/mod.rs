@@ -9,18 +9,18 @@ pub type Result<T> = result::Result<T, Error>;
 pub enum IniEvent<'a> {
     /// Beginning of the INI section. Contain unescaped section name
     StartSection(&'a str),
-    /// End of the INI section.
+    /// End of the INI section
     EndSection,
-    /// Key-Value pair.
-    Key(&'a str, &'a str),
-    /// End of the INI document.
+    /// Key-Value pair
+    Property(&'a str, &'a str),
+    /// End of the INI document
     EndDocument,
 }
 
 impl<'a> fmt::Debug for IniEvent<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            IniEvent::Key(ref key, ref value) => write!(f, "Key({}, {})", key, value),
+            IniEvent::Property(ref key, ref value) => write!(f, "Property({}, {})", key, value),
             IniEvent::StartSection(ref name) => write!(f, "StartSection({})", name),
             IniEvent::EndSection => write!(f, "EndSection"),
             IniEvent::EndDocument => write!(f, "EndDocument"),
@@ -50,21 +50,25 @@ impl<R: Read> EventReader<R> {
         }
     }
 
-    #[inline]
-    fn read_token(&mut self) -> Result<usize> {
-        self.buffer.clear();
-        let size = self.reader.read_line(&mut self.buffer)?;
-        Ok(size)
-    }
+    pub fn next(&mut self) -> Result<IniEvent> {
+        let token = loop {
+            if self.skip_read {
+                self.skip_read = false;
+                break self.buffer.as_str().trim_start();
+            }
 
-    #[inline]
-    fn check_token(&mut self) -> bool {
-        let token = self.buffer.as_str().trim_start();
-        ! (token.len() == 0 || token.starts_with(';'))
-    }
+            self.buffer.clear();
+            let size = self.reader.read_line(&mut self.buffer)?;
+            if size == 0 {
+                return Ok(IniEvent::EndDocument);
+            }
+            self.line += 1;
 
-    fn parse_token(&mut self) -> Result<IniEvent> {
-        let token = self.buffer.as_str();
+            let token = self.buffer.as_str().trim_start();
+            if ! (token.len() == 0 || token.starts_with(';')) {
+                break self.buffer.as_str().trim_start();
+            }
+        };
 
         if token.starts_with('[') {
             /* Section */
@@ -76,38 +80,24 @@ impl<R: Read> EventReader<R> {
                 self.parse_section = true;
             }
 
-            let token = &token[1 ..]; /* skip [ */
-            let token = token.trim_start();
+            let token = (&token[1 ..]).trim_start(); /* skip [ */
             let token = match token.find(']') {
                 Some(v) => &token[.. v],
-                None => return Err(Error::from((self.line, "wrong section format"))),
+                None => return Err(Error::from((self.line, "Syntax Error: expected ‘]’ after section name"))),
             };
             let token = token.trim_end();
             return Ok(IniEvent::StartSection(token));
         }
 
+        let delim = match token.find('=') {
+            Some(v) => v,
+            None => return Err(Error::from((self.line, "Syntax Error: expected ‘=’ after property name"))),
+        };
+
+        let key = (&token[.. delim]).trim_end();
+        let value = (&token[delim + 1 ..]).trim();
+
         // TODO: continue here...
-        Ok(IniEvent::Key("", token))
-    }
-
-    /// Pulls and returns next INI event from the stream
-    pub fn next(&mut self) -> Result<IniEvent> {
-        loop {
-            if ! self.skip_read {
-                let size = self.read_token()?;
-                if size == 0 {
-                    return Ok(IniEvent::EndDocument);
-                }
-                self.line += 1;
-
-                if ! self.check_token() {
-                    continue;
-                }
-            } else {
-                self.skip_read = false;
-            }
-
-            return self.parse_token();
-        }
+        Ok(IniEvent::Property(key, value))
     }
 }
