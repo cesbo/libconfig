@@ -6,18 +6,18 @@ pub use self::error::{Error, ErrorKind};
 
 pub type Result<T> = result::Result<T, Error>;
 
-pub enum IniEvent<'a> {
+pub enum IniEvent {
     /// Beginning of the INI section. Contain unescaped section name
-    StartSection(&'a str),
+    StartSection(String),
     /// End of the INI section
     EndSection,
     /// Key-Value pair
-    Property(&'a str, &'a str),
+    Property(String, String),
     /// End of the INI document
     EndDocument,
 }
 
-impl<'a> fmt::Debug for IniEvent<'a> {
+impl fmt::Debug for IniEvent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             IniEvent::Property(ref key, ref value) => write!(f, "Property({}, {})", key, value),
@@ -54,7 +54,7 @@ impl<R: Read> EventReader<R> {
         let token = loop {
             if self.skip_read {
                 self.skip_read = false;
-                break self.buffer.as_str().trim_start();
+                break self.buffer.trim_start();
             }
 
             self.buffer.clear();
@@ -64,9 +64,9 @@ impl<R: Read> EventReader<R> {
             }
             self.line += 1;
 
-            let token = self.buffer.as_str().trim_start();
+            let token = self.buffer.trim_start();
             if ! (token.len() == 0 || token.starts_with(';')) {
-                break self.buffer.as_str().trim_start();
+                break token;
             }
         };
 
@@ -85,7 +85,7 @@ impl<R: Read> EventReader<R> {
                 Some(v) => &token[.. v],
                 None => return Err(Error::from((self.line, "Syntax Error: expected ‘]’ after section name"))),
             };
-            let token = token.trim_end();
+            let token = token.trim_end().to_string();
             return Ok(IniEvent::StartSection(token));
         }
 
@@ -94,10 +94,9 @@ impl<R: Read> EventReader<R> {
             None => return Err(Error::from((self.line, "Syntax Error: expected ‘=’ after property name"))),
         };
 
-        let key = (&token[.. delim]).trim_end();
-        let value = (&token[delim + 1 ..]).trim();
+        let key = (&token[.. delim]).trim_end().to_string();
+        let value = (&token[delim + 1 ..]).trim().to_string();
 
-        // TODO: continue here...
         Ok(IniEvent::Property(key, value))
     }
 }
