@@ -1,32 +1,6 @@
-use std::{fmt, result};
 use std::io::{Read, BufRead, BufReader};
 
-mod error;
-pub use self::error::{Error, ErrorKind};
-
-pub type Result<T> = result::Result<T, Error>;
-
-pub enum IniEvent {
-    /// Beginning of the INI section. Contain unescaped section name
-    StartSection(String),
-    /// End of the INI section
-    EndSection,
-    /// Key-Value pair
-    Property(String, String),
-    /// End of the INI document
-    EndDocument,
-}
-
-impl fmt::Debug for IniEvent {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            IniEvent::Property(ref key, ref value) => write!(f, "Property({}, {})", key, value),
-            IniEvent::StartSection(ref name) => write!(f, "StartSection({})", name),
-            IniEvent::EndSection => write!(f, "EndSection"),
-            IniEvent::EndDocument => write!(f, "EndDocument"),
-        }
-    }
-}
+use crate::{IniEvent, Error, Result};
 
 pub struct EventReader<R: Read> {
     reader: BufReader<R>,
@@ -40,9 +14,9 @@ pub struct EventReader<R: Read> {
 impl<R: Read> EventReader<R> {
     /// Creates a new reader
     #[inline]
-    pub fn new(source: R) -> EventReader<R> {
+    pub fn new(src: R) -> EventReader<R> {
         EventReader {
-            reader: BufReader::new(source),
+            reader: BufReader::new(src),
             buffer: String::new(),
             line: 0,
             parse_section: false,

@@ -1,5 +1,5 @@
 extern crate ini;
-use ini::reader::*;
+use ini::*;
 
 const T1: &str = r#"
 [section-A]

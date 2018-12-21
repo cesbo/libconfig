@@ -1,4 +1,4 @@
-use std::{error, fmt, io};
+use std::{error, fmt, io, result};
 use std::borrow::Cow;
 
 #[inline]
@@ -17,6 +17,8 @@ pub struct Error {
     line: usize,
     kind: ErrorKind,
 }
+
+pub type Result<T> = result::Result<T, Error>;
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
