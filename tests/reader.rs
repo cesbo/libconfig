@@ -41,7 +41,13 @@ fn test_reader() {
             },
             IniEvent::Property(key, value) => {
                 key_count += 1;
-                println!("Property({:?}, {:?})", key, value);
+                match key {
+                    "key.1" => assert_eq!(value, "123"),
+                    "key.2" => assert_eq!(value, "foo"),
+                    "key.3" => assert_eq!(value, "456"),
+                    "key.4" => assert_eq!(value, "bar"),
+                    _ => unreachable!(),
+                };
             },
             IniEvent::EndDocument => {
                 end_document_count += 1;

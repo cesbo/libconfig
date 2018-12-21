@@ -40,6 +40,7 @@ impl<R: Read> EventReader<R> {
 
             let token = self.buffer.trim_start();
             if ! (token.len() == 0 || token.starts_with(';')) {
+                // WTF: should be token here
                 break self.buffer.trim_start();
             }
         };
