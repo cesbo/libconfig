@@ -8,7 +8,7 @@ key.2 = foo
 
 ; comment
 
-[section-B] ; comment
+[section-B]
 key.3 = 456
 key.4 = bar
 "#;

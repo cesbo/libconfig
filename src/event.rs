@@ -1,17 +1,17 @@
 use std::fmt;
 
-pub enum IniEvent {
+pub enum IniEvent<'a> {
     /// Beginning of the INI section. Contain unescaped section name
-    StartSection(String),
+    StartSection(&'a str),
     /// End of the INI section
     EndSection,
     /// Key-Value pair
-    Property(String, String),
+    Property(&'a str, &'a str),
     /// End of the INI document
     EndDocument,
 }
 
-impl fmt::Debug for IniEvent {
+impl<'a> fmt::Debug for IniEvent<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             IniEvent::Property(ref key, ref value) => write!(f, "Property({}, {})", key, value),
