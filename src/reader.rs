@@ -59,7 +59,7 @@ impl<R: Read> EventReader<R> {
                 Some(v) => &token[.. v],
                 None => return Err(Error::from((self.line, "Syntax Error: expected ‘]’ after section name"))),
             };
-            let token = token.trim_end().to_string();
+            let token = token.trim_end().to_owned();
             return Ok(IniEvent::StartSection(token));
         }
 
@@ -68,8 +68,8 @@ impl<R: Read> EventReader<R> {
             None => return Err(Error::from((self.line, "Syntax Error: expected ‘=’ after property name"))),
         };
 
-        let key = (&token[.. delim]).trim_end().to_string();
-        let value = (&token[delim + 1 ..]).trim().to_string();
+        let key = (&token[.. delim]).trim_end().to_owned();
+        let value = (&token[delim + 1 ..]).trim().to_owned();
 
         Ok(IniEvent::Property(key, value))
     }

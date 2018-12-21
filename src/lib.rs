@@ -6,3 +6,6 @@ pub use crate::event::IniEvent;
 
 mod reader;
 pub use crate::reader::EventReader;
+
+mod writer;
+pub use crate::writer::EventWriter;
