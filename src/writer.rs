@@ -17,7 +17,7 @@ impl<W: Write> EventWriter<W> {
 
     pub fn write(&mut self, event: IniEvent) -> Result<()> {
         match event {
-            IniEvent::StartSection(ref name) => {
+            IniEvent::StartSection(name) => {
                 let name = name.trim_left();
                 if name.is_empty() {
                     return Err(Error::from((0, "Syntax Error: missing section name")));
@@ -25,7 +25,7 @@ impl<W: Write> EventWriter<W> {
 
                 write!(self.writer, "\n[{}]\n", name)?;
             },
-            IniEvent::Property(ref key, ref value) => {
+            IniEvent::Property(key, value) => {
                 let value = value.trim_left();
                 if value.is_empty() {
                     return Ok(());
