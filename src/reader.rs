@@ -24,33 +24,30 @@ impl<R: Read> EventReader<R> {
         }
     }
 
-    pub fn next(&mut self) -> Result<IniEvent> {
-        let token = loop {
-            if self.skip_read {
-                self.skip_read = false;
-                break self.buffer.trim_start();
-            }
-
+    pub fn next(&mut self) -> Option<Result<IniEvent>> {
+        if self.skip_read {
+            self.skip_read = false;
+        } else {
             self.buffer.clear();
-            let size = self.reader.read_line(&mut self.buffer)?;
-            if size == 0 {
-                return Ok(IniEvent::EndDocument);
-            }
+            match self.reader.read_line(&mut self.buffer) {
+                Ok(v) if v > 0 => {},
+                Ok(_) => return None,
+                Err(e) => return Some(Err(Error::from(e))),
+            };
             self.line += 1;
+        }
 
-            let token = self.buffer.trim_start();
-            if ! (token.len() == 0 || token.starts_with(';')) {
-                // WTF: should be token here
-                break self.buffer.trim_start();
-            }
-        };
+        let token = self.buffer.trim_start();
+        if token.len() == 0 || token.starts_with(';') {
+            return Some(Ok(IniEvent::Skip));
+        }
 
         if token.starts_with('[') {
             /* Section */
             if self.parse_section {
                 self.parse_section = false;
                 self.skip_read = true;
-                return Ok(IniEvent::EndSection);
+                return Some(Ok(IniEvent::EndSection));
             } else {
                 self.parse_section = true;
             }
@@ -58,20 +55,20 @@ impl<R: Read> EventReader<R> {
             let token = (&token[1 ..]).trim_start(); /* skip [ */
             let token = match token.find(']') {
                 Some(v) => &token[.. v],
-                None => return Err(Error::from((self.line, "Syntax Error: expected ‘]’ after section name"))),
+                None => return Some(Err(Error::from((self.line, "Syntax Error: expected ‘]’ after section name")))),
             };
             let token = token.trim_end();
-            return Ok(IniEvent::StartSection(token));
+            return Some(Ok(IniEvent::StartSection(token)));
         }
 
         let delim = match token.find('=') {
             Some(v) => v,
-            None => return Err(Error::from((self.line, "Syntax Error: expected ‘=’ after property name"))),
+            None => return Some(Err(Error::from((self.line, "Syntax Error: expected ‘=’ after property name")))),
         };
 
         let key = (&token[.. delim]).trim_end();
         let value = (&token[delim + 1 ..]).trim();
 
-        Ok(IniEvent::Property(key, value))
+        Some(Ok(IniEvent::Property(key, value)))
     }
 }

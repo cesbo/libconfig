@@ -16,28 +16,22 @@ key.4 = bar
 #[test]
 fn test_reader() {
     let mut reader = EventReader::new(T1.as_bytes());
-    let mut step = 0;
-    let mut start_section_count = 0;
+    let mut section_count = 0;
     let mut end_section_count = 0;
-    let mut end_document_count = 0;
     let mut key_count = 0;
 
-    loop {
-        assert!(step <= 7);
-        step += 1;
-
-        match reader.next().unwrap() {
+    while let Some(item) = reader.next() {
+        match item.unwrap() {
             IniEvent::StartSection(name) => {
-                start_section_count += 1;
-                match step {
+                section_count += 1;
+                match section_count {
                     1 => assert_eq!(name, "section-A"),
-                    5 => assert_eq!(name, "section-B"),
+                    2 => assert_eq!(name, "section-B"),
                     _ => unreachable!(),
                 };
             },
             IniEvent::EndSection => {
                 end_section_count += 1;
-                assert!(step == 4);
             },
             IniEvent::Property(key, value) => {
                 key_count += 1;
@@ -49,16 +43,11 @@ fn test_reader() {
                     _ => unreachable!(),
                 };
             },
-            IniEvent::EndDocument => {
-                end_document_count += 1;
-                assert!(step == 8);
-                break;
-            }
+            IniEvent::Skip => {},
         }
     }
 
     assert_eq!(key_count, 4);
-    assert_eq!(start_section_count, 2);
+    assert_eq!(section_count, 2);
     assert_eq!(end_section_count, 1);
-    assert_eq!(end_document_count, 1);
 }

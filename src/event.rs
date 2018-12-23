@@ -7,8 +7,8 @@ pub enum IniEvent<'a> {
     EndSection,
     /// Key-Value pair
     Property(&'a str, &'a str),
-    /// End of the INI document
-    EndDocument,
+    /// Empty line or comment
+    Skip,
 }
 
 impl<'a> fmt::Debug for IniEvent<'a> {
@@ -17,7 +17,7 @@ impl<'a> fmt::Debug for IniEvent<'a> {
             IniEvent::Property(ref key, ref value) => write!(f, "Property({}, {})", key, value),
             IniEvent::StartSection(ref name) => write!(f, "StartSection({})", name),
             IniEvent::EndSection => write!(f, "EndSection"),
-            IniEvent::EndDocument => write!(f, "EndDocument"),
+            IniEvent::Skip => write!(f, "Skip"),
         }
     }
 }
