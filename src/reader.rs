@@ -38,7 +38,7 @@ impl<R: Read> EventReader<R> {
         }
 
         let token = self.buffer.trim_start();
-        if token.len() == 0 || token.starts_with(';') {
+        if token.is_empty() || token.starts_with(';') {
             return Some(Ok(IniEvent::Skip));
         }
 

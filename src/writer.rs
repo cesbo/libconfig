@@ -15,7 +15,7 @@ impl<W: Write> EventWriter<W> {
         }
     }
 
-    pub fn write(&mut self, event: IniEvent) -> Result<()> {
+    pub fn write(&mut self, event: &IniEvent) -> Result<()> {
         match event {
             IniEvent::StartSection(name) => {
                 let name = name.trim_left();
@@ -36,7 +36,7 @@ impl<W: Write> EventWriter<W> {
                     return Err(Error::from((0, "Syntax Error: missing property name")));
                 }
 
-                write!(self.writer, "{} = {}\n", key, value)?;
+                writeln!(self.writer, "{} = {}", key, value)?;
             },
             _ => {},
         };
