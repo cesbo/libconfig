@@ -1,8 +1,29 @@
+use std::fmt;
 use std::io::{Read, BufRead, BufReader};
+use std::iter::Iterator;
 
-use crate::{IniEvent, Error, Result};
+use crate::{Error, Result};
 
-pub struct EventReader<R: Read> {
+pub enum IniItem {
+    /// Beginning of the INI section. Contain unescaped section name
+    StartSection(String),
+    /// End of the INI section
+    EndSection,
+    /// Key-Value pair
+    Property(String, String),
+}
+
+impl<'a> fmt::Debug for IniItem {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            IniItem::Property(ref key, ref value) => write!(f, "Property({}, {})", key, value),
+            IniItem::StartSection(ref name) => write!(f, "StartSection({})", name),
+            IniItem::EndSection => write!(f, "EndSection"),
+        }
+    }
+}
+
+pub struct IniReader<R: Read> {
     reader: BufReader<R>,
     buffer: String,
     line: usize,
@@ -11,11 +32,11 @@ pub struct EventReader<R: Read> {
     skip_read: bool,
 }
 
-impl<R: Read> EventReader<R> {
+impl<R: Read> IniReader<R> {
     /// Creates a new reader
     #[inline]
-    pub fn new(src: R) -> EventReader<R> {
-        EventReader {
+    pub fn new(src: R) -> IniReader<R> {
+        IniReader {
             reader: BufReader::new(src),
             buffer: String::new(),
             line: 0,
@@ -23,31 +44,38 @@ impl<R: Read> EventReader<R> {
             skip_read: false,
         }
     }
+}
 
-    pub fn next(&mut self) -> Option<Result<IniEvent>> {
-        if self.skip_read {
-            self.skip_read = false;
-        } else {
-            self.buffer.clear();
-            match self.reader.read_line(&mut self.buffer) {
-                Ok(v) if v > 0 => {},
-                Ok(_) => return None,
-                Err(e) => return Some(Err(Error::from(e))),
-            };
-            self.line += 1;
-        }
+impl<R: Read> Iterator for IniReader<R> {
+    type Item = Result<IniItem>;
 
-        let token = self.buffer.trim_start();
-        if token.is_empty() || token.starts_with(';') {
-            return Some(Ok(IniEvent::Skip));
-        }
+    fn next(&mut self) -> Option<Result<IniItem>> {
+        let token = loop {
+            if self.skip_read {
+                self.skip_read = false;
+            } else {
+                self.buffer.clear();
+                match self.reader.read_line(&mut self.buffer) {
+                    Ok(v) if v > 0 => {},
+                    Ok(_) => return None,
+                    Err(e) => return Some(Err(Error::from(e))),
+                };
+                self.line += 1;
+            }
+
+            let token = self.buffer.trim_start();
+            if token.is_empty() || token.starts_with(';') {
+                continue;
+            }
+            break token;
+        };
 
         if token.starts_with('[') {
             /* Section */
             if self.parse_section {
                 self.parse_section = false;
                 self.skip_read = true;
-                return Some(Ok(IniEvent::EndSection));
+                return Some(Ok(IniItem::EndSection));
             } else {
                 self.parse_section = true;
             }
@@ -57,8 +85,8 @@ impl<R: Read> EventReader<R> {
                 Some(v) => &token[.. v],
                 None => return Some(Err(Error::from((self.line, "Syntax Error: expected ‘]’ after section name")))),
             };
-            let token = token.trim_end();
-            return Some(Ok(IniEvent::StartSection(token)));
+            let token = token.trim_end().to_owned();
+            return Some(Ok(IniItem::StartSection(token)));
         }
 
         let delim = match token.find('=') {
@@ -66,9 +94,9 @@ impl<R: Read> EventReader<R> {
             None => return Some(Err(Error::from((self.line, "Syntax Error: expected ‘=’ after property name")))),
         };
 
-        let key = (&token[.. delim]).trim_end();
-        let value = (&token[delim + 1 ..]).trim();
+        let key = (&token[.. delim]).trim_end().to_owned();
+        let value = (&token[delim + 1 ..]).trim().to_owned();
 
-        Some(Ok(IniEvent::Property(key, value)))
+        Some(Ok(IniItem::Property(key, value)))
     }
 }
