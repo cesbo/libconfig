@@ -8,4 +8,4 @@ mod reader;
 pub use crate::reader::EventReader;
 
 mod writer;
-pub use crate::writer::EventWriter;
+pub use crate::writer::IniWriter;
