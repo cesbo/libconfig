@@ -13,7 +13,7 @@ pub enum IniItem {
     Property(String, String),
 }
 
-impl<'a> fmt::Debug for IniItem {
+impl fmt::Debug for IniItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             IniItem::Property(ref key, ref value) => write!(f, "Property({}, {})", key, value),
