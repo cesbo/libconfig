@@ -15,38 +15,35 @@ key.4 = bar
 
 #[test]
 fn test_reader() {
-    let mut reader = IniReader::new(T1.as_bytes());
-    let mut section_count = 0;
-    let mut end_section_count = 0;
-    let mut key_count = 0;
+    let config = IniReader::parse(T1.as_bytes()).unwrap();
+    assert_eq!(config.len(), 3);
 
-    while let Some(item) = reader.next() {
-        match item.unwrap() {
-            IniItem::StartSection(name) => {
-                section_count += 1;
-                match section_count {
-                    1 => assert_eq!(name, "section-A"),
-                    2 => assert_eq!(name, "section-B"),
-                    _ => unreachable!(),
-                };
+    for (ref name, ref section) in config {
+        match name.as_str() {
+            "section-A" => {
+                assert_eq!(section.len(), 2);
+                for (ref key, ref value) in section {
+                    match key.as_str() {
+                        "key.1" => assert_eq!(value.as_str(), "123"),
+                        "key.2" => assert_eq!(value.as_str(), "foo"),
+                        _ => unreachable!(),
+                    };
+                }
             },
-            IniItem::EndSection => {
-                end_section_count += 1;
+            "section-B" => {
+                assert_eq!(section.len(), 2);
+                for (ref key, ref value) in section {
+                    match key.as_str() {
+                        "key.3" => assert_eq!(value.as_str(), "456"),
+                        "key.4" => assert_eq!(value.as_str(), "bar"),
+                        _ => unreachable!(),
+                    };
+                }
             },
-            IniItem::Property(key, value) => {
-                key_count += 1;
-                match key.as_str() {
-                    "key.1" => assert_eq!(value, "123"),
-                    "key.2" => assert_eq!(value, "foo"),
-                    "key.3" => assert_eq!(value, "456"),
-                    "key.4" => assert_eq!(value, "bar"),
-                    _ => unreachable!(),
-                };
+            "" => {
+                assert_eq!(section.len(), 0);
             },
+            _ => unreachable!(),
         }
     }
-
-    assert_eq!(key_count, 4);
-    assert_eq!(section_count, 2);
-    assert_eq!(end_section_count, 1);
 }
