@@ -13,16 +13,19 @@ key.4 = bar
 
 #[test]
 fn test_writer() {
-    let buffer = Vec::<u8>::new();
-    let mut writer = IniWriter::new(buffer);
+    let mut ini = Ini::default();
 
-    writer.write_section("section-A").unwrap();
-    writer.write_property("key.1", "🐽").unwrap();
-    writer.write_property("key.2", "foo").unwrap();
-    writer.write_section("section-B").unwrap();
-    writer.write_property("key.3", "456").unwrap();
-    writer.write_property("key.4", "bar").unwrap();
+    let mut sa = Section::default();
+    sa.push("key.1", "🐽");
+    sa.push("key.2", "foo");
+    ini.push("section-A", sa);
 
-    let s = String::from_utf8(writer.into_inner()).unwrap();
-    assert_eq!(s, T1);
+    let mut sb = Section::default();
+    sb.push("key.3", "456");
+    sb.push("key.4", "bar");
+    ini.push("section-B", sb);
+
+    let mut s = Vec::<u8>::new();
+    ini.dump(&mut s).unwrap();
+    assert_eq!(s.as_slice(), T1.as_bytes());
 }

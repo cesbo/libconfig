@@ -15,7 +15,7 @@ key.4 = bar
 
 #[test]
 fn test_reader() {
-    let config = IniReader::parse(T1.as_bytes()).unwrap();
+    let config = Ini::parse(T1.as_bytes()).unwrap();
     assert_eq!(config.len(), 3);
 
     for (ref name, ref section) in config {
