@@ -1,6 +1,6 @@
 use std::io::{Read, BufRead, BufReader, Write, BufWriter};
 use std::fs::File;
-
+use std::path::Path;
 
 mod error;
 pub use crate::error::{Error, ErrorKind, Result};
@@ -152,7 +152,7 @@ impl Ini {
         Ok(ini)
     }
 
-    pub fn open(path: &str) -> Result<Self> {
+    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         let file = File::open(path)?;
         Self::parse(file)
     }
@@ -171,7 +171,7 @@ impl Ini {
         Ok(())
     }
 
-    pub fn save(&self, path: &str) -> Result<()> {
+    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let file = File::create(path)?;
         let mut writer = BufWriter::new(file);
         self.dump(&mut writer)?;
