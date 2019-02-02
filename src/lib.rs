@@ -26,7 +26,10 @@ impl Section {
     where
         S: Into<String>,
     {
-        self.0.push((key.into(), value.into()));
+        let s = value.into();
+        if ! s.is_empty() {
+            self.0.push((key.into(), s));
+        }
     }
 }
 
@@ -57,27 +60,6 @@ impl<'a> IntoIterator for &'a Section {
 pub struct Ini(Vec<(String, Section)>);
 
 
-impl Ini {
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    #[inline]
-    pub fn push<S>(&mut self, name: S, section: Section)
-    where
-        S: Into<String>,
-    {
-        self.0.push((name.into(), section));
-    }
-}
-
-
 impl IntoIterator for Ini {
     type Item = (String, Section);
     type IntoIter = ::std::vec::IntoIter<Self::Item>;
@@ -101,6 +83,26 @@ impl<'a> IntoIterator for &'a Ini {
 
 
 impl Ini {
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    #[inline]
+    pub fn push<S>(&mut self, name: S, section: Section)
+    where
+        S: Into<String>,
+    {
+        if ! section.is_empty() {
+            self.0.push((name.into(), section));
+        }
+    }
+
     pub fn parse<R: Read>(src: R) -> Result<Self> {
         let mut ini = Ini::default();
 
