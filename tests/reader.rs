@@ -2,17 +2,34 @@ extern crate ini;
 use ini::*;
 
 const T1: &str = r#"
-[section-A]
-key.1 = 123
-key.2 = foo
-
 ; comment
 
-[section-B]
-key.3 = 456
-key.4 = bar
+xmltv = /projects/opt/discovery.xml
+output = udp://127.0.0.1:10000
+
+[multiplex]
+tsid = 1
+
+[.service]
+pnr = 1
+xmltv-id = discovery-channel
+
+[..test]
+value = test for discovery-channel
+
+[.service]
+xmltv = /projects/opt/yamal.xml
+pnr = 1185
+xmltv-id = yamal-region
 "#;
 
+#[test]
+fn test_reader() {
+    let config = Section::parse(T1.as_bytes()).unwrap();
+    println!("{:#?}", config);
+}
+
+/*
 #[test]
 fn test_reader() {
     let config = Ini::parse(T1.as_bytes()).unwrap();
@@ -47,3 +64,4 @@ fn test_reader() {
         }
     }
 }
+*/

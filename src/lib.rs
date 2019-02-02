@@ -1,39 +1,93 @@
-use std::io::{Read, BufRead, BufReader, Write, BufWriter};
+use std::io::{Read, BufRead, BufReader , Write, BufWriter};
 use std::fs::File;
 use std::path::Path;
 
 mod error;
-pub use crate::error::{Error, ErrorKind, Result};
+pub use crate::error::{Error, Result};
 
 
 #[derive(Debug, Default)]
-pub struct Section(Vec<(String, String)>);
-
-
-impl Section {
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    #[inline]
-    pub fn push<S>(&mut self, key: S, value: S)
-    where
-        S: Into<String>,
-    {
-        let s = value.into();
-        if ! s.is_empty() {
-            self.0.push((key.into(), s));
-        }
-    }
+pub struct Property {
+    name: String,
+    value: String,
 }
 
 
+#[derive(Debug, Default)]
+pub struct Section {
+    name: String,
+    properties: Vec<Property>,
+    sections: Vec<Section>,
+}
+
+
+impl Section {
+    pub fn parse<R: Read>(src: R) -> Result<Section> {
+        let mut reader = BufReader::new(src);
+        let mut buffer = String::new();
+
+        let mut root = Section::default();
+        let mut last = &mut root;
+
+        loop {
+            buffer.clear();
+            match reader.read_line(&mut buffer) {
+                Ok(v) => if v == 0 { break },
+                Err(e) => return Err(Error::from(e)),
+            };
+
+
+            let token = buffer.trim_start();
+            if token.is_empty() || token.starts_with(';') {
+                continue;
+            }
+
+            if token.starts_with('[') {
+                /* Section */
+                let token = (&token[1 ..]).trim_start(); /* skip [ */
+                // TODO: check ‘.’
+                let token = match token.find(']') {
+                    Some(v) => (&token[.. v]).trim_end(),
+                    None => return Err(Error::from("Syntax Error: expected ‘]’ after section name")),
+                };
+
+                let mut level = token.find(|c: char| c != '.').unwrap_or(0);
+                let section = Section {
+                    name: (&token[level ..]).trim_start().to_owned(),
+                    properties: Vec::new(),
+                    sections: Vec::new(),
+                };
+
+                last = &mut root;
+                while level > 0 {
+                    last = match last.sections.last_mut() {
+                        Some(v) => v,
+                        None => return Err(Error::from("Syntax Error: wrong section level")),
+                    };
+                    level -= 1;
+                }
+                last.sections.push(section);
+                last = last.sections.last_mut().unwrap();
+
+                continue;
+            }
+
+            let skip = match token.find('=') {
+                Some(v) => v,
+                None => return Err(Error::from("Syntax Error: expected ‘=’ after property name")),
+            };
+
+            last.properties.push(Property {
+                name: (&token[.. skip]).trim_end().to_owned(),
+                value: (&token[skip + 1 ..]).trim().to_owned(),
+            });
+        }
+
+        Ok(root)
+    }
+}
+
+/*
 impl IntoIterator for Section {
     type Item = (String, String);
     type IntoIter = ::std::vec::IntoIter<Self::Item>;
@@ -54,7 +108,6 @@ impl<'a> IntoIterator for &'a Section {
         (&self.0).into_iter()
     }
 }
-
 
 #[derive(Debug, Default)]
 pub struct Ini(Vec<(String, Section)>);
@@ -154,11 +207,6 @@ impl Ini {
         Ok(ini)
     }
 
-    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let file = File::open(path)?;
-        Self::parse(file)
-    }
-
     pub fn dump<W: Write>(&self, mut dst: W) -> Result<()> {
         for (name, section) in self {
             if ! name.is_empty() {
@@ -180,3 +228,4 @@ impl Ini {
         Ok(())
     }
 }
+*/
