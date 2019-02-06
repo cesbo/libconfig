@@ -33,41 +33,17 @@ fn test_reader() {
     assert_eq!(config.get_str("test", "opt").unwrap(), "opt");
     assert_eq!(config.get_bool("bool", false).unwrap(), true);
     assert_eq!(config.get_number::<u16>("u16", 0).unwrap(), 1234u16);
-}
 
-/*
-#[test]
-fn test_reader() {
-    let config = Ini::parse(T1.as_bytes()).unwrap();
-    assert_eq!(config.len(), 3);
+    for multiplex in config.sections() {
+        assert_eq!(multiplex.get_name(), "multiplex");
+        assert_eq!(multiplex.get_number::<u16>("tsid", 0).unwrap(), 1);
 
-    for (ref name, ref section) in config {
-        match name.as_str() {
-            "section-A" => {
-                assert_eq!(section.len(), 2);
-                for (ref key, ref value) in section {
-                    match key.as_str() {
-                        "key.1" => assert_eq!(value.as_str(), "123"),
-                        "key.2" => assert_eq!(value.as_str(), "foo"),
-                        _ => unreachable!(),
-                    };
-                }
-            },
-            "section-B" => {
-                assert_eq!(section.len(), 2);
-                for (ref key, ref value) in section {
-                    match key.as_str() {
-                        "key.3" => assert_eq!(value.as_str(), "456"),
-                        "key.4" => assert_eq!(value.as_str(), "bar"),
-                        _ => unreachable!(),
-                    };
-                }
-            },
-            "" => {
-                assert_eq!(section.len(), 0);
-            },
-            _ => unreachable!(),
+        for service in multiplex.sections() {
+            match service.get_number::<u16>("pnr", 0).unwrap() {
+                1 => assert_eq!(service.get_str("xmltv-id", None).unwrap(), "discovery-channel"),
+                1185 => assert_eq!(service.get_str("xmltv-id", None).unwrap(), "yamal-region"),
+                _ => unreachable!(),
+            }
         }
     }
 }
-*/

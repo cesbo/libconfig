@@ -1,5 +1,6 @@
 use std::io::{Read, BufRead, BufReader};
 use std::fs::File;
+use std::slice::Iter;
 use std::path::Path;
 
 mod error;
@@ -30,6 +31,11 @@ pub struct Section {
 
 impl Section {
     #[inline]
+    pub fn get_name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    #[inline]
     fn get_property(&self, name: &str) -> Option<&Property> {
         for p in &self.properties {
             if p.name == name {
@@ -39,7 +45,10 @@ impl Section {
         None
     }
 
-    pub fn get_str<'a, T: Into<Option<&'a str>>>(&'a self, name: &str, opt: T) -> Result<&'a str> {
+    pub fn get_str<'a, T>(&'a self, name: &str, opt: T) -> Result<&'a str>
+    where
+        T: Into<Option<&'a str>>,
+    {
         match self.get_property(name) {
             Some(v) => Ok(v.value.as_str()),
             None => match opt.into() {
@@ -56,10 +65,19 @@ impl Section {
         }
     }
 
-    pub fn get_number<T: FromProperty>(&self, name: &str, opt: T) -> Result<T> {
+    pub fn get_number<F>(&self, name: &str, opt: F) -> Result<F>
+    where
+        F: FromProperty,
+    {
         match self.get_property(name) {
             Some(v) => FromProperty::from_property(v),
             None => Ok(opt),
+        }
+    }
+
+    pub fn sections<'a>(&'a self) -> SectionIter<'a> {
+        SectionIter {
+            inner: self.sections.iter()
         }
     }
 
@@ -94,7 +112,7 @@ impl Section {
                     None => return Err(Error::from("Syntax Error: expected ‘]’ after section name")),
                 };
 
-                let mut level = token.find(|c: char| c != '>').unwrap_or(0);
+                let mut level = token.find(|c: char| c != '.').unwrap_or(0);
                 let section = Section {
                     line,
                     name: (&token[level ..]).trim_start().to_owned(),
@@ -193,6 +211,19 @@ impl FromProperty for i32 {
     }
 }
 
+
+pub struct SectionIter<'a> {
+    inner: Iter<'a, Section>,
+}
+
+
+impl<'a> Iterator for SectionIter<'a> {
+    type Item = &'a Section;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+}
 
 /*
 impl IntoIterator for Section {
