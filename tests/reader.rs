@@ -13,6 +13,7 @@ bool = true
 tsid = 1
 
 [.service]
+name = 🐽
 pnr = 1
 xmltv-id = discovery-channel
 
