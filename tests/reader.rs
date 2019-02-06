@@ -1,11 +1,13 @@
 extern crate ini;
-use ini::*;
+use ini::Section;
 
 const T1: &str = r#"
 ; comment
 
 xmltv = /projects/opt/discovery.xml
 output = udp://127.0.0.1:10000
+u16 = 1234
+bool = true
 
 [multiplex]
 tsid = 1
@@ -26,7 +28,11 @@ xmltv-id = yamal-region
 #[test]
 fn test_reader() {
     let config = Section::parse(T1.as_bytes()).unwrap();
-    println!("{:#?}", config);
+
+    assert_eq!(config.get_str("xmltv", None).unwrap(), "/projects/opt/discovery.xml");
+    assert_eq!(config.get_str("test", "opt").unwrap(), "opt");
+    assert_eq!(config.get_bool("bool", false).unwrap(), true);
+    assert_eq!(config.get_number::<u16>("u16", 0).unwrap(), 1234u16);
 }
 
 /*
