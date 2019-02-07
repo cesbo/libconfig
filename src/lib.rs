@@ -91,6 +91,7 @@ impl Section {
         None
     }
 
+    #[inline]
     pub fn get_str<'a>(&'a self, name: &str) -> Option<&'a str> {
         match self.get_property(name) {
             Some(v) => Some(v.value.as_str()),
@@ -98,6 +99,7 @@ impl Section {
         }
     }
 
+    #[inline]
     pub fn get_bool(&self, name: &str, opt: bool) -> Result<bool> {
         match self.get_property(name) {
             Some(v) => FromProperty::from_property(v),
@@ -105,6 +107,7 @@ impl Section {
         }
     }
 
+    #[inline]
     pub fn get_number<F>(&self, name: &str, opt: F) -> Result<F>
     where
         F: FromProperty,
@@ -115,6 +118,7 @@ impl Section {
         }
     }
 
+    #[inline]
     pub fn sections<'a>(&'a self) -> SectionIter<'a> {
         SectionIter {
             inner: self.sections.iter()
@@ -189,7 +193,6 @@ impl Section {
         Ok(root)
     }
 
-    #[inline]
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         let file = File::open(path)?;
         Self::parse(file)
@@ -214,7 +217,6 @@ impl Section {
         Ok(())
     }
 
-    #[inline]
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let file = File::create(path)?;
         let mut writer = BufWriter::new(file);
@@ -225,60 +227,71 @@ impl Section {
 
 
 impl FromProperty for bool {
+    #[inline]
     fn from_property(p: &Property) -> Result<bool> {
         match p.value.parse() {
             Ok(v) => Ok(v),
-            _ => Err(Error::Format(p.line)),
+            Err(e) => Err(Error::ParseBoolError(p.line, e)),
         }
     }
 }
 
 
 impl FromProperty for u8 {
+    #[inline]
     fn from_property(p: &Property) -> Result<u8> {
-        match p.value.parse() {
+        let (skip, radix) = if p.value.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
+        match u8::from_str_radix(&p.value[skip ..], radix) {
             Ok(v) => Ok(v),
-            Err(_) => Err(Error::Format(p.line)),
+            Err(e) => Err(Error::ParseIntError(p.line, e)),
         }
     }
 }
 
 
 impl FromProperty for u16 {
+    #[inline]
     fn from_property(p: &Property) -> Result<u16> {
-        match p.value.parse() {
+        let (skip, radix) = if p.value.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
+        match u16::from_str_radix(&p.value[skip ..], radix) {
             Ok(v) => Ok(v),
-            Err(_) => Err(Error::Format(p.line)),
+            Err(e) => Err(Error::ParseIntError(p.line, e)),
         }
     }
 }
 
 
 impl FromProperty for u32 {
+    #[inline]
     fn from_property(p: &Property) -> Result<u32> {
-        match p.value.parse() {
+        let (skip, radix) = if p.value.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
+        match u32::from_str_radix(&p.value[skip ..], radix) {
             Ok(v) => Ok(v),
-            Err(_) => Err(Error::Format(p.line)),
+            Err(e) => Err(Error::ParseIntError(p.line, e)),
         }
     }
 }
 
 
 impl FromProperty for i32 {
+    #[inline]
     fn from_property(p: &Property) -> Result<i32> {
-        match p.value.parse() {
+        let (skip, radix) = if p.value.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
+        match i32::from_str_radix(&p.value[skip ..], radix) {
             Ok(v) => Ok(v),
-            Err(_) => Err(Error::Format(p.line)),
+            Err(e) => Err(Error::ParseIntError(p.line, e)),
         }
     }
 }
 
 
 impl FromProperty for usize {
+    #[inline]
     fn from_property(p: &Property) -> Result<usize> {
-        match p.value.parse() {
+        let (skip, radix) = if p.value.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
+        match usize::from_str_radix(&p.value[skip ..], radix) {
             Ok(v) => Ok(v),
-            Err(_) => Err(Error::Format(p.line)),
+            Err(e) => Err(Error::ParseIntError(p.line, e)),
         }
     }
 }
