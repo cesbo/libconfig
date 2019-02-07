@@ -149,7 +149,7 @@ impl Section {
                 // TODO: check ‘.’
                 let token = match token.find(']') {
                     Some(v) => (&token[.. v]).trim_end(),
-                    None => return Err(Error::from("Syntax Error: expected ‘]’ after section name")),
+                    None => return Err(Error::Syntax(line, "missing ‘]’ after section name")),
                 };
 
                 let mut level = token.find(|c: char| c != '.').unwrap_or(0);
@@ -164,7 +164,7 @@ impl Section {
                 while level > 0 {
                     last = match last.sections.last_mut() {
                         Some(v) => v,
-                        None => return Err(Error::from("Syntax Error: wrong section level")),
+                        None => return Err(Error::Syntax(line, "wrong section level")),
                     };
                     level -= 1;
                 }
@@ -176,7 +176,7 @@ impl Section {
 
             let skip = match token.find('=') {
                 Some(v) => v,
-                None => return Err(Error::from("Syntax Error: expected ‘=’ after property name")),
+                None => return Err(Error::Syntax(line, "missing ‘=’ in property declaration")),
             };
 
             last.properties.push(Property {
@@ -228,8 +228,7 @@ impl FromProperty for bool {
     fn from_property(p: &Property) -> Result<bool> {
         match p.value.parse() {
             Ok(v) => Ok(v),
-            _ => Err(Error::from(format!("property '{}' line {} has wrong format. value should be ‘true’ or ‘false’",
-                                         &p.name, p.line))),
+            _ => Err(Error::Format(p.line)),
         }
     }
 }
@@ -239,8 +238,7 @@ impl FromProperty for u8 {
     fn from_property(p: &Property) -> Result<u8> {
         match p.value.parse() {
             Ok(v) => Ok(v),
-            Err(_) => Err(Error::from(format!("property '{}' line {} has wrong format. value should be in range {} .. {}",
-                                              &p.name, p.line, u8::min_value(), u8::max_value()))),
+            Err(_) => Err(Error::Format(p.line)),
         }
     }
 }
@@ -250,8 +248,7 @@ impl FromProperty for u16 {
     fn from_property(p: &Property) -> Result<u16> {
         match p.value.parse() {
             Ok(v) => Ok(v),
-            Err(_) => Err(Error::from(format!("property '{}' line {} has wrong format. value should be in range {} .. {}",
-                                              &p.name, p.line, u16::min_value(), u16::max_value()))),
+            Err(_) => Err(Error::Format(p.line)),
         }
     }
 }
@@ -261,8 +258,7 @@ impl FromProperty for u32 {
     fn from_property(p: &Property) -> Result<u32> {
         match p.value.parse() {
             Ok(v) => Ok(v),
-            Err(_) => Err(Error::from(format!("property '{}' line {} has wrong format. value should be in range {} .. {}",
-                                              &p.name, p.line, u32::min_value(), u32::max_value()))),
+            Err(_) => Err(Error::Format(p.line)),
         }
     }
 }
@@ -272,8 +268,7 @@ impl FromProperty for i32 {
     fn from_property(p: &Property) -> Result<i32> {
         match p.value.parse() {
             Ok(v) => Ok(v),
-            Err(_) => Err(Error::from(format!("property '{}' line {} has wrong format. value should be in range {} .. {}",
-                                              &p.name, p.line, i32::min_value(), i32::max_value()))),
+            Err(_) => Err(Error::Format(p.line)),
         }
     }
 }
@@ -283,8 +278,7 @@ impl FromProperty for usize {
     fn from_property(p: &Property) -> Result<usize> {
         match p.value.parse() {
             Ok(v) => Ok(v),
-            Err(_) => Err(Error::from(format!("property '{}' line {} has wrong format. value should be in range {} .. {}",
-                                              &p.name, p.line, usize::min_value(), usize::max_value()))),
+            Err(_) => Err(Error::Format(p.line)),
         }
     }
 }
