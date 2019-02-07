@@ -140,7 +140,6 @@ impl Section {
             if token.starts_with('[') {
                 /* Section */
                 let token = (&token[1 ..]).trim_start(); /* skip [ */
-                // TODO: check ‘.’
                 let token = match token.find(']') {
                     Some(v) => (&token[.. v]).trim_end(),
                     None => return Err(Error::Syntax(line, "missing ‘]’ after section name")),
