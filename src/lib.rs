@@ -16,14 +16,15 @@ pub struct Property {
 
 
 impl Property {
-    pub fn new<S>(name: S, value: S) -> Self
+    pub fn new<S,T>(name: S, value: T) -> Self
     where
         S: Into<String>,
+        T: ToString,
     {
         Property {
             line: 0,
             name: name.into(),
-            value: value.into(),
+            value: value.to_string(),
         }
     }
 }
