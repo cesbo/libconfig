@@ -15,8 +15,27 @@ pub struct Property {
 }
 
 
+impl Property {
+    pub fn new<S>(name: S, value: S) -> Self
+    where
+        S: Into<String>,
+    {
+        Property {
+            line: 0,
+            name: name.into(),
+            value: value.into(),
+        }
+    }
+}
+
+
 pub trait FromProperty: Sized {
     fn from_property(p: &Property) -> Result<Self>;
+}
+
+
+pub trait SectionPush {
+    fn section_push(self, s: &mut Section);
 }
 
 
@@ -30,6 +49,27 @@ pub struct Section {
 
 
 impl Section {
+    #[inline]
+    pub fn new<S>(name: S) -> Self
+    where
+        S: Into<String>,
+    {
+        Section {
+            line: 0,
+            name: name.into(),
+            properties: Vec::new(),
+            sections: Vec::new(),
+        }
+    }
+
+    #[inline]
+    pub fn push<I>(&mut self, item: I)
+    where
+        I: SectionPush,
+    {
+        SectionPush::section_push(item, self);
+    }
+
     #[inline]
     pub fn get_name(&self) -> &str {
         self.name.as_str()
@@ -236,6 +276,20 @@ impl FromProperty for i32 {
             Err(_) => Err(Error::from(format!("property '{}' line {} has wrong format. value should be in range {} .. {}",
                                               &p.name, p.line, i32::min_value(), i32::max_value()))),
         }
+    }
+}
+
+
+impl SectionPush for Property {
+    fn section_push(self, s: &mut Section) {
+        s.properties.push(self);
+    }
+}
+
+
+impl SectionPush for Section {
+    fn section_push(self, s: &mut Section) {
+        s.sections.push(self);
     }
 }
 
