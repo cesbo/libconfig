@@ -77,6 +77,11 @@ impl Section {
     }
 
     #[inline]
+    pub fn get_line(&self) -> usize {
+        self.line
+    }
+
+    #[inline]
     fn get_property(&self, name: &str) -> Option<&Property> {
         for p in &self.properties {
             if p.name == name {
