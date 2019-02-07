@@ -281,6 +281,17 @@ impl FromProperty for i32 {
 }
 
 
+impl FromProperty for usize {
+    fn from_property(p: &Property) -> Result<usize> {
+        match p.value.parse() {
+            Ok(v) => Ok(v),
+            Err(_) => Err(Error::from(format!("property '{}' line {} has wrong format. value should be in range {} .. {}",
+                                              &p.name, p.line, usize::min_value(), usize::max_value()))),
+        }
+    }
+}
+
+
 impl SectionPush for Property {
     fn section_push(self, s: &mut Section) {
         s.properties.push(self);
