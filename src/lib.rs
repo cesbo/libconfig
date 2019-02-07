@@ -30,16 +30,6 @@ impl Property {
 }
 
 
-pub trait FromProperty: Sized {
-    fn from_property(p: &Property) -> Result<Self>;
-}
-
-
-pub trait SectionPush {
-    fn section_push(self, s: &mut Section);
-}
-
-
 #[derive(Debug, Default)]
 pub struct Section {
     line: usize,
@@ -226,6 +216,12 @@ impl Section {
 }
 
 
+/// A trait to abstract creating a new instance of a type from a Property
+pub trait FromProperty: Sized {
+    fn from_property(p: &Property) -> Result<Self>;
+}
+
+
 impl FromProperty for bool {
     #[inline]
     fn from_property(p: &Property) -> Result<bool> {
@@ -237,63 +233,28 @@ impl FromProperty for bool {
 }
 
 
-impl FromProperty for u8 {
-    #[inline]
-    fn from_property(p: &Property) -> Result<u8> {
-        let (skip, radix) = if p.value.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
-        match u8::from_str_radix(&p.value[skip ..], radix) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(Error::ParseIntError(p.line, e)),
-        }
-    }
+macro_rules! impl_get_number {
+    ( $( $t:tt ),* ) => {
+        $( impl FromProperty for $t {
+            #[inline]
+            fn from_property(p: &Property) -> Result<$t> {
+                let (skip, radix) = if p.value.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
+                match $t::from_str_radix(&p.value[skip ..], radix) {
+                    Ok(v) => Ok(v),
+                    Err(e) => Err(Error::ParseIntError(p.line, e)),
+                }
+            }
+        } )*
+    };
 }
 
 
-impl FromProperty for u16 {
-    #[inline]
-    fn from_property(p: &Property) -> Result<u16> {
-        let (skip, radix) = if p.value.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
-        match u16::from_str_radix(&p.value[skip ..], radix) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(Error::ParseIntError(p.line, e)),
-        }
-    }
-}
+impl_get_number!(u8, i8, u16, i16, u32, i32, u64, i64, usize, isize);
 
 
-impl FromProperty for u32 {
-    #[inline]
-    fn from_property(p: &Property) -> Result<u32> {
-        let (skip, radix) = if p.value.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
-        match u32::from_str_radix(&p.value[skip ..], radix) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(Error::ParseIntError(p.line, e)),
-        }
-    }
-}
-
-
-impl FromProperty for i32 {
-    #[inline]
-    fn from_property(p: &Property) -> Result<i32> {
-        let (skip, radix) = if p.value.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
-        match i32::from_str_radix(&p.value[skip ..], radix) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(Error::ParseIntError(p.line, e)),
-        }
-    }
-}
-
-
-impl FromProperty for usize {
-    #[inline]
-    fn from_property(p: &Property) -> Result<usize> {
-        let (skip, radix) = if p.value.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
-        match usize::from_str_radix(&p.value[skip ..], radix) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(Error::ParseIntError(p.line, e)),
-        }
-    }
+/// A trait to abstract pushing a new Property or Section into Section
+pub trait SectionPush {
+    fn section_push(self, s: &mut Section);
 }
 
 
@@ -310,7 +271,7 @@ impl SectionPush for Section {
     }
 }
 
-
+/// An iterator over the Sections of a Section.
 pub struct SectionIter<'a> {
     inner: Iter<'a, Section>,
 }
