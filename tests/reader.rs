@@ -30,8 +30,8 @@ xmltv-id = yamal-region
 fn test_reader() {
     let config = Section::parse(T1.as_bytes()).unwrap();
 
-    assert_eq!(config.get_str("xmltv", None).unwrap(), "/projects/opt/discovery.xml");
-    assert_eq!(config.get_str("test", "opt").unwrap(), "opt");
+    assert_eq!(config.get_str("xmltv").unwrap(), "/projects/opt/discovery.xml");
+    assert_eq!(config.get_str("test").unwrap_or("opt"), "opt");
     assert_eq!(config.get_bool("bool", false).unwrap(), true);
     assert_eq!(config.get_number::<u16>("u16", 0).unwrap(), 1234u16);
 
@@ -41,8 +41,8 @@ fn test_reader() {
 
         for service in multiplex.sections() {
             match service.get_number::<u16>("pnr", 0).unwrap() {
-                1 => assert_eq!(service.get_str("xmltv-id", None).unwrap(), "discovery-channel"),
-                1185 => assert_eq!(service.get_str("xmltv-id", None).unwrap(), "yamal-region"),
+                1 => assert_eq!(service.get_str("xmltv-id").unwrap(), "discovery-channel"),
+                1185 => assert_eq!(service.get_str("xmltv-id").unwrap(), "yamal-region"),
                 _ => unreachable!(),
             }
         }

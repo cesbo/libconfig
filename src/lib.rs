@@ -86,16 +86,10 @@ impl Section {
         None
     }
 
-    pub fn get_str<'a, T>(&'a self, name: &str, opt: T) -> Result<&'a str>
-    where
-        T: Into<Option<&'a str>>,
-    {
+    pub fn get_str<'a>(&'a self, name: &str) -> Option<&'a str> {
         match self.get_property(name) {
-            Some(v) => Ok(v.value.as_str()),
-            None => match opt.into() {
-                Some(v) => Ok(v),
-                None => Err(Error::from(format!("property '{}' not found in section '{}' line {}", name, &self.name, self.line))),
-            },
+            Some(v) => Some(v.value.as_str()),
+            None => None,
         }
     }
 
