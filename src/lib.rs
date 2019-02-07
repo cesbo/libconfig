@@ -221,9 +221,8 @@ impl Section {
 
 impl FromProperty for bool {
     fn from_property(p: &Property) -> Result<bool> {
-        match p.value.as_str() {
-            "true" => Ok(true),
-            "false" => Ok(false),
+        match p.value.parse() {
+            Ok(v) => Ok(v),
             _ => Err(Error::from(format!("property '{}' line {} has wrong format. value should be ‘true’ or ‘false’",
                                          &p.name, p.line))),
         }
