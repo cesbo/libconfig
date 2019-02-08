@@ -181,13 +181,13 @@ impl Section {
         Ok(root)
     }
 
+    #[inline]
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let file = File::open(path)?;
-        Self::parse(file)
+        Self::parse(File::open(path)?)
     }
 
     fn dump_section<W: Write>(&self, dst: &mut W, level: usize) -> Result<()> {
-        if ! self.name.is_empty() {
+        if level > 0 {
             writeln!(dst, "\n[{:@>1$}]", &self.name, self.name.len() + level - 1)?;
         }
         for p in &self.properties {
@@ -200,16 +200,14 @@ impl Section {
     }
 
     #[inline]
-    pub fn dump<W: Write>(&self, dst: &mut W) -> Result<()> {
-        self.dump_section(dst, 0)?;
-        Ok(())
+    pub fn dump<W: Write>(&self, dst: W) -> Result<()> {
+        let mut writer = BufWriter::new(dst);
+        self.dump_section(&mut writer, 0)
     }
 
+    #[inline]
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-        let file = File::create(path)?;
-        let mut writer = BufWriter::new(file);
-        self.dump(&mut writer)?;
-        Ok(())
+        self.dump(File::create(path)?)
     }
 }
 
