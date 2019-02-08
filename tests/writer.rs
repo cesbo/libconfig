@@ -11,21 +11,22 @@ fn test_writer() {
     config.push(Property::new("u16", 1234));
     config.push(Property::new("bool", true));
 
-    let mut s = Section::new("multiplex");
-    s.push(Property::new("tsid", 1));
-    config.push(s);
+    let mut m = Section::new("multiplex");
+    m.push(Property::new("tsid", 1));
 
     let mut s = Section::new("service");
     s.push(Property::new("name", "🐽"));
     s.push(Property::new("pnr", 1));
     s.push(Property::new("xmltv-id", "discovery-channel"));
-    config.push(s);
+    m.push(s);
 
     let mut s = Section::new("service");
     s.push(Property::new("xmltv", "/projects/opt/yamal.xml"));
     s.push(Property::new("pnr", 1185));
     s.push(Property::new("xmltv-id", "yamal-region"));
-    config.push(s);
+    m.push(s);
+
+    config.push(m);
 
     let mut s = Vec::<u8>::new();
     config.dump(&mut s).unwrap();

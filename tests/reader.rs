@@ -10,19 +10,16 @@ fn test_reader() {
     assert_eq!(config.get_bool("bool", false).unwrap(), true);
     assert_eq!(config.get_number::<u16>("u16", 0).unwrap(), 1234u16);
 
-    for s in config.sections() {
-        match s.get_name() {
-            "multiplex" => {
-                assert_eq!(s.get_number::<u16>("tsid", 0).unwrap(), 1);
-            },
-            "service" => {
-                match s.get_number::<u16>("pnr", 0).unwrap() {
-                    1 => assert_eq!(s.get_str("xmltv-id").unwrap(), "discovery-channel"),
-                    1185 => assert_eq!(s.get_str("xmltv-id").unwrap(), "yamal-region"),
-                    _ => unreachable!(),
-                }
-            },
-            _ => unreachable!(),
+    for multiplex in config.sections() {
+        assert_eq!(multiplex.get_name(), "multiplex");
+        assert_eq!(multiplex.get_number::<u16>("tsid", 0).unwrap(), 1);
+
+        for service in multiplex.sections() {
+            match service.get_number::<u16>("pnr", 0).unwrap() {
+                1 => assert_eq!(service.get_str("xmltv-id").unwrap(), "discovery-channel"),
+                1185 => assert_eq!(service.get_str("xmltv-id").unwrap(), "yamal-region"),
+                _ => unreachable!(),
+            }
         }
     }
 }
