@@ -145,24 +145,15 @@ impl Section {
                     None => return Err(Error::Syntax(line, "missing ‘]’ after section name")),
                 };
 
-                let mut level = token.find(|c: char| c != '.').unwrap_or(0);
                 let section = Section {
                     line,
-                    name: (&token[level ..]).trim_start().to_owned(),
+                    name: token.to_owned(),
                     properties: Vec::new(),
                     sections: Vec::new(),
                 };
 
-                last = &mut root;
-                while level > 0 {
-                    last = match last.sections.last_mut() {
-                        Some(v) => v,
-                        None => return Err(Error::Syntax(line, "wrong section level")),
-                    };
-                    level -= 1;
-                }
-                last.sections.push(section);
-                last = last.sections.last_mut().unwrap();
+                root.sections.push(section);
+                last = root.sections.last_mut().unwrap();
 
                 continue;
             }
@@ -187,22 +178,17 @@ impl Section {
         Self::parse(file)
     }
 
-    fn dump_section<W: Write>(&self, dst: &mut W, level: usize) -> Result<()> {
+
+    pub fn dump<W: Write>(&self, dst: &mut W) -> Result<()> {
         if ! self.name.is_empty() {
-            writeln!(dst, "\n[{:.>1$}]", &self.name, self.name.len() + level - 1)?;
+            writeln!(dst, "\n[{}]", &self.name)?;
         }
         for p in &self.properties {
             writeln!(dst, "{} = {}", &p.name, &p.value)?;
         }
         for s in &self.sections {
-            s.dump_section(dst, level + 1)?;
+            s.dump(dst)?;
         }
-        Ok(())
-    }
-
-    #[inline]
-    pub fn dump<W: Write>(&self, dst: &mut W) -> Result<()> {
-        self.dump_section(dst, 0)?;
         Ok(())
     }
 
