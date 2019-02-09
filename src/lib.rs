@@ -108,7 +108,7 @@ impl Config {
     }
 
     #[inline]
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a Config> {
+    pub fn iter(&self) -> impl Iterator<Item = &Config> {
         self.nested.iter()
     }
 
