@@ -1,6 +1,5 @@
 use std::io::{Read, BufRead, BufReader, Write, BufWriter};
 use std::fs::File;
-use std::slice::Iter;
 use std::path::Path;
 
 mod error;
@@ -109,10 +108,8 @@ impl Config {
     }
 
     #[inline]
-    pub fn iter<'a>(&'a self) -> ConfigIter<'a> {
-        ConfigIter {
-            inner: self.nested.iter()
-        }
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a Config> {
+        self.nested.iter()
     }
 
     pub fn parse<R: Read>(src: R) -> Result<Config> {
@@ -260,19 +257,5 @@ impl ConfigPush for Property {
 impl ConfigPush for Config {
     fn config_push(self, s: &mut Config) {
         s.nested.push(self);
-    }
-}
-
-/// An iterator over the Sections of a Config.
-pub struct ConfigIter<'a> {
-    inner: Iter<'a, Config>,
-}
-
-
-impl<'a> Iterator for ConfigIter<'a> {
-    type Item = &'a Config;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next()
     }
 }
