@@ -31,34 +31,34 @@ impl Property {
 
 
 #[derive(Debug, Default)]
-pub struct Section {
+pub struct Config {
     line: usize,
     name: String,
-    properties: Vec<Property>,
-    sections: Vec<Section>,
+    items: Vec<Property>,
+    nested: Vec<Config>,
 }
 
 
-impl Section {
+impl Config {
     #[inline]
     pub fn new<S>(name: S) -> Self
     where
         S: Into<String>,
     {
-        Section {
+        Config {
             line: 0,
             name: name.into(),
-            properties: Vec::new(),
-            sections: Vec::new(),
+            items: Vec::new(),
+            nested: Vec::new(),
         }
     }
 
     #[inline]
     pub fn push<I>(&mut self, item: I)
     where
-        I: SectionPush,
+        I: ConfigPush,
     {
-        SectionPush::section_push(item, self);
+        ConfigPush::config_push(item, self);
     }
 
     #[inline]
@@ -73,7 +73,7 @@ impl Section {
 
     #[inline]
     fn get_property(&self, name: &str) -> Option<&Property> {
-        for p in &self.properties {
+        for p in &self.items {
             if p.name == name {
                 return Some(&p);
             }
@@ -109,19 +109,19 @@ impl Section {
     }
 
     #[inline]
-    pub fn sections<'a>(&'a self) -> SectionIter<'a> {
-        SectionIter {
-            inner: self.sections.iter()
+    pub fn iter<'a>(&'a self) -> ConfigIter<'a> {
+        ConfigIter {
+            inner: self.nested.iter()
         }
     }
 
-    pub fn parse<R: Read>(src: R) -> Result<Section> {
+    pub fn parse<R: Read>(src: R) -> Result<Config> {
         let mut line = 0;
 
         let mut reader = BufReader::new(src);
         let mut buffer = String::new();
 
-        let mut root = Section::default();
+        let mut root = Config::default();
         let mut last = &mut root;
 
         loop {
@@ -138,26 +138,26 @@ impl Section {
             }
 
             if token.starts_with('#') {
-                /* Section */
+                /* Config */
                 let level = token.find(|c: char| c != '#').unwrap_or(0);
                 let token = (&token[level ..]).trim(); /* skip [ */
 
-                let section = Section {
+                let section = Config {
                     line,
                     name: token.to_owned(),
-                    properties: Vec::new(),
-                    sections: Vec::new(),
+                    items: Vec::new(),
+                    nested: Vec::new(),
                 };
 
                 last = &mut root;
                 for _ in 1 .. level {
-                    last = match last.sections.last_mut() {
+                    last = match last.nested.last_mut() {
                         Some(v) => v,
                         None => return Err(Error::Syntax(line, "wrong section level")),
                     };
                 }
-                last.sections.push(section);
-                last = last.sections.last_mut().unwrap();
+                last.nested.push(section);
+                last = last.nested.last_mut().unwrap();
 
                 continue;
             }
@@ -167,7 +167,7 @@ impl Section {
                 None => return Err(Error::Syntax(line, "missing ‘=’ in property declaration")),
             };
 
-            last.properties.push(Property {
+            last.items.push(Property {
                 line,
                 name: (&token[.. skip]).trim_end().to_owned(),
                 value: (&token[skip + 1 ..]).trim().to_owned(),
@@ -186,10 +186,10 @@ impl Section {
         if level > 0 {
             writeln!(dst, "\n{0:#>1$} {2}", "", level, &self.name)?;
         }
-        for p in &self.properties {
+        for p in &self.items {
             writeln!(dst, "{} = {}", &p.name, &p.value)?;
         }
-        for s in &self.sections {
+        for s in &self.nested {
             s.dump_section(dst, level + 1)?;
         }
         Ok(())
@@ -244,33 +244,33 @@ macro_rules! impl_get_number {
 impl_get_number!(u8, i8, u16, i16, u32, i32, u64, i64, usize, isize);
 
 
-/// A trait to abstract pushing a new Property or Section into Section
-pub trait SectionPush {
-    fn section_push(self, s: &mut Section);
+/// A trait to abstract pushing a new Property or Config into Config
+pub trait ConfigPush {
+    fn config_push(self, s: &mut Config);
 }
 
 
-impl SectionPush for Property {
-    fn section_push(self, s: &mut Section) {
-        s.properties.push(self);
+impl ConfigPush for Property {
+    fn config_push(self, s: &mut Config) {
+        s.items.push(self);
     }
 }
 
 
-impl SectionPush for Section {
-    fn section_push(self, s: &mut Section) {
-        s.sections.push(self);
+impl ConfigPush for Config {
+    fn config_push(self, s: &mut Config) {
+        s.nested.push(self);
     }
 }
 
-/// An iterator over the Sections of a Section.
-pub struct SectionIter<'a> {
-    inner: Iter<'a, Section>,
+/// An iterator over the Sections of a Config.
+pub struct ConfigIter<'a> {
+    inner: Iter<'a, Config>,
 }
 
 
-impl<'a> Iterator for SectionIter<'a> {
-    type Item = &'a Section;
+impl<'a> Iterator for ConfigIter<'a> {
+    type Item = &'a Config;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next()

@@ -1,26 +1,26 @@
 use std::fs;
 
-extern crate ini;
-use ini::*;
+extern crate config;
+use config::{Config, Property};
 
 #[test]
 fn test_writer() {
-    let mut config = Section::new("");
+    let mut config = Config::new("");
     config.push(Property::new("xmltv", "/projects/opt/discovery.xml"));
     config.push(Property::new("output", "udp://127.0.0.1:10000"));
     config.push(Property::new("u16", 1234));
     config.push(Property::new("bool", true));
 
-    let mut m = Section::new("multiplex");
+    let mut m = Config::new("multiplex");
     m.push(Property::new("tsid", 1));
 
-    let mut s = Section::new("service");
+    let mut s = Config::new("service");
     s.push(Property::new("name", "🐽"));
     s.push(Property::new("pnr", 1));
     s.push(Property::new("xmltv-id", "discovery-channel"));
     m.push(s);
 
-    let mut s = Section::new("service");
+    let mut s = Config::new("service");
     s.push(Property::new("xmltv", "/projects/opt/yamal.xml"));
     s.push(Property::new("pnr", 1185));
     s.push(Property::new("xmltv-id", "yamal-region"));
@@ -32,6 +32,6 @@ fn test_writer() {
     config.dump(&mut s).unwrap();
     let s = unsafe { String::from_utf8_unchecked(s) };
 
-    let t1 = fs::read_to_string("tests/data/t1.ini").unwrap();
+    let t1 = fs::read_to_string("tests/data/t1.conf").unwrap();
     assert_eq!(s.as_str(), t1.as_str());
 }

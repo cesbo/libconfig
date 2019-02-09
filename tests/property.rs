@@ -1,5 +1,5 @@
-extern crate ini;
-use ini::Section;
+extern crate config;
+use config::Config;
 
 const T1: &str = r#"
 true = true
@@ -14,7 +14,7 @@ u16 = 0x1234
 
 #[test]
 fn test_property() {
-    let config = Section::parse(T1.as_bytes()).unwrap();
+    let config = Config::parse(T1.as_bytes()).unwrap();
 
     match config.get_bool("true", false) {
         Ok(v) => assert_eq!(v, true),
