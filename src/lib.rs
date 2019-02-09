@@ -137,24 +137,20 @@ impl Section {
                 continue;
             }
 
-            if token.starts_with('[') {
+            if token.starts_with('#') {
                 /* Section */
-                let token = (&token[1 ..]).trim_start(); /* skip [ */
-                let token = match token.find(']') {
-                    Some(v) => (&token[.. v]).trim_end(),
-                    None => return Err(Error::Syntax(line, "missing ‘]’ after section name")),
-                };
+                let level = token.find(|c: char| c != '#').unwrap_or(0);
+                let token = (&token[level ..]).trim(); /* skip [ */
 
-                let level = token.find(|c: char| c != '@').unwrap_or(0);
                 let section = Section {
                     line,
-                    name: (&token[level ..]).trim_start().to_owned(),
+                    name: token.to_owned(),
                     properties: Vec::new(),
                     sections: Vec::new(),
                 };
 
                 last = &mut root;
-                for _ in 0 .. level {
+                for _ in 1 .. level {
                     last = match last.sections.last_mut() {
                         Some(v) => v,
                         None => return Err(Error::Syntax(line, "wrong section level")),
@@ -188,7 +184,7 @@ impl Section {
 
     fn dump_section<W: Write>(&self, dst: &mut W, level: usize) -> Result<()> {
         if level > 0 {
-            writeln!(dst, "\n[{:@>1$}]", &self.name, self.name.len() + level - 1)?;
+            writeln!(dst, "\n{0:#>1$} {2}", "", level, &self.name)?;
         }
         for p in &self.properties {
             writeln!(dst, "{} = {}", &p.name, &p.value)?;
