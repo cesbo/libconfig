@@ -89,15 +89,7 @@ impl Config {
     }
 
     #[inline]
-    pub fn get_bool(&self, name: &str, opt: bool) -> Result<bool> {
-        match self.get_property(name) {
-            Some(v) => FromProperty::from_property(v),
-            None => Ok(opt),
-        }
-    }
-
-    #[inline]
-    pub fn get_number<F>(&self, name: &str, opt: F) -> Result<F>
+    pub fn get<F>(&self, name: &str, opt: F) -> Result<F>
     where
         F: FromProperty,
     {
