@@ -251,3 +251,33 @@ impl ConfigPush for Config {
         s.nested.push(self);
     }
 }
+
+/*
+trait Schema_path<Path> {
+    fn file_path(self)-> Path;
+}
+
+impl Schema_path<Path> for Path {
+    fn file_path(self) -> Path {
+        self.file
+    }
+}
+*/
+
+pub struct Schema {
+    file: Path,   
+}
+
+impl Schema {
+    #[inline]
+    //pub fn new<P: AsRef<Path>>(schema: P) -> Self
+    pub fn new(file_patch: Path) -> Self
+    {
+        Schema {
+            file: file_patch, 
+        }
+    }
+    pub fn handbook(self) {
+        let config = Config::open(self.file).unwrap();
+    }
+}
