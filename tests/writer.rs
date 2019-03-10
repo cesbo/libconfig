@@ -1,7 +1,7 @@
 use std::fs;
 
 extern crate config;
-use config::{Config, Property};
+use config::config::{Config, Property};
 
 #[test]
 fn test_writer() {

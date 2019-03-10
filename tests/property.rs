@@ -1,5 +1,5 @@
 extern crate config;
-use config::Config;
+use config::config::Config;
 
 const T1: &str = r#"
 true = true
