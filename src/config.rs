@@ -101,6 +101,11 @@ impl Config {
     #[inline]
     pub fn iter(&self) -> impl Iterator<Item = &Config> {
         self.nested.iter()
+    }    
+    
+    #[inline]
+    pub fn iter_items(&self) -> impl Iterator<Item = &Property> {
+        self.items.iter()
     }
 
     pub fn parse<R: Read>(src: R) -> Result<Config> {
