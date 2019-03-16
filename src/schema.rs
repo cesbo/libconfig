@@ -1,19 +1,25 @@
-use super::config::Config;
 use std::collections::HashMap;
-//use super::config::*;
 
-struct Params {
+use super::config::Config;
+
+
+#[derive(Debug, Default)]
+struct Param {
     name: String,
     description: String,
     required: bool,
     validators: Vec<String>,
 }
 
+
+#[derive(Debug, Default)]
 pub struct Schema {
     vereficate: bool,
-    params: Vec<Params>,
+    params: Vec<Param>,
+    check_global: bool,
     check_list: HashMap<String, bool>
 }
+
 
 impl Schema {
     #[inline]
@@ -22,62 +28,57 @@ impl Schema {
         Schema {
             vereficate: false,
             params: Vec::new(),
+            check_global: true,
             check_list: HashMap::new(),
         }
     }
-    
-    pub fn info(self)-> String {
-        "test ok".to_string()
-    }
-    
+        
+    #[inline]
     pub fn set<S>(&mut self, name: S, description: S, required: bool, validators: Vec<String>)
     where
         S: Into<String>,    
     {
-        let params = Params {
+        let param = Param {
             name: name.into(),
             description: description.into(),
             required: required,
             validators: validators,
         };
-        self.params.push(params);
+        self.params.push(param);
     }
     
+    #[inline]
     pub fn check(&mut self, config: &Config)-> String {
-        let mut is_set = false;
-        for params in self.params.iter() {
-            if config.get_str(&params.name) != None {
-                println!("{} - est",params.name);
+        let mut result = String::new();
+        for param in self.params.iter() {
+            if config.get_str(&param.name) != None {
+                self.check_list.insert(param.name.to_string(), true);
             }
             else{
-                println!("{} - none",params.name);
+                self.check_list.insert(param.name.to_string(), false);
+                if param.required {
+                    self.check_global = false;
+                    result.push_str("Error: config whithout parametr: ");
+                    result.push_str(&param.name);
+                    result.push_str("\n");
+                }
             }
-            /*for items in config.iter_items(){
-                if params.name == items.name{
-                   println!("est");
-                }
-                else{
-                   println!("no");
-                }
-                //дописать
-            }*/
         }
-        /*
-        println!("Str  is {}",config.get_str("xmltv").unwrap());
-        for multiplex in config.iter() {
-            println!("Multiplex");
-            self.check_items(multiplex);
-            for service in multiplex.iter() {
-                println!("Service");
-                self.check_items(service);
-            }
-        }*/
-        "ok".to_string()
+        if result == "" {
+            result = "Ok".to_string();
+        }
+        result
     }
     
-    fn check_items(&self, config: &Config) {
-        for items in config.iter_items(){
-            println!("Iter Items");
-        }        
+    #[inline]
+    pub fn info(&mut self) -> String {
+        let mut result = String::new();
+        for param in self.params.iter() {
+            result.push_str(&param.name);
+            result.push_str(" - ");
+            result.push_str(&param.description);
+            result.push_str("\n");
+        }
+        result
     }
 }
