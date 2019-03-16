@@ -14,7 +14,6 @@ struct Param {
 
 #[derive(Debug, Default)]
 pub struct Schema {
-    vereficate: bool,
     params: Vec<Param>,
     check_global: bool,
     check_list: HashMap<String, bool>
@@ -26,7 +25,6 @@ impl Schema {
     pub fn new() -> Self
     {
         Schema {
-            vereficate: false,
             params: Vec::new(),
             check_global: true,
             check_list: HashMap::new(),
