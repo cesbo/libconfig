@@ -15,7 +15,6 @@ struct Param {
 #[derive(Debug, Default)]
 pub struct Schema {
     params: Vec<Param>,
-    check_global: bool,
     check_list: HashMap<String, bool>
 }
 
@@ -26,7 +25,6 @@ impl Schema {
     {
         Schema {
             params: Vec::new(),
-            check_global: true,
             check_list: HashMap::new(),
         }
     }
@@ -55,10 +53,10 @@ impl Schema {
             else{
                 self.check_list.insert(param.name.to_string(), false);
                 if param.required {
-                    self.check_global = false;
                     result.push_str("Error: config whithout parametr: ");
                     result.push_str(&param.name);
                     result.push_str("\n");
+                    return result;
                 }
             }
         }
