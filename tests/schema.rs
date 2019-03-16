@@ -12,7 +12,7 @@ fn test_schema() {
     schema.set("test_key", "This is testparam", true, vec![]);
     schema.set("test_req", "Test not Required param", false, vec![]);
     println!("Result check() schema is \n{}", schema.check(&config));
-    println!("Result into() schema is \n{}", schema.info());
+    println!("Result info() schema is \n{}", schema.info());
     println!("{:#?}", config); 
     println!("{:#?}", schema);
 }
