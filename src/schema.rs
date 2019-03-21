@@ -1,19 +1,21 @@
 use std::collections::HashMap;
+use std::boxed::Box;
 
 use super::config::Config;
 
 
-#[derive(Debug, Default)]
+//#[derive(Debug, Default)]
 struct Param {
     name: String,
     description: String,
     required: bool,
-    validators: Vec<String>,
+    validators: Box<Fn(&str) -> bool>,
 }
 
 
-#[derive(Debug, Default)]
-pub struct Schema {
+//#[derive(Debug, Default)]
+pub struct Schema 
+{
     params: Vec<Param>,
     check_list: HashMap<String, bool>
 }
@@ -30,33 +32,37 @@ impl Schema {
     }
         
     #[inline]
-    pub fn set<S>(&mut self, name: S, description: S, required: bool, validators: Vec<String>)
+    pub fn set<S,B: 'static>(&mut self, name: S, description: S, required: bool, validators: B)
     where
-        S: Into<String>,    
+        S: Into<String>,
+        B: Fn(&str) -> bool, 
     {
         let param = Param {
             name: name.into(),
             description: description.into(),
             required: required,
-            validators: validators,
+            validators: Box::new(validators),
         };
         self.params.push(param);
     }
     
     #[inline]
-    pub fn check(&mut self, config: &Config)-> String {
+    pub fn check(&mut self, config: &Config) -> String {
         let mut result = String::new();
         for param in self.params.iter() {
             if config.get_str(&param.name) != None {
-                self.check_list.insert(param.name.to_string(), true);
+                let check_func = (&param.validators)(config.get_str(&param.name).unwrap());
+                if check_func{
+                    self.check_list.insert(param.name.to_string(), true);
+                }
+                else {
+                    return format!("Format Error at line :{}",  &param.name)
+                }
             }
             else{
                 self.check_list.insert(param.name.to_string(), false);
                 if param.required {
-                    result.push_str("Error: config whithout parametr: ");
-                    result.push_str(&param.name);
-                    result.push_str("\n");
-                    return result;
+                    return format!("Syntax Error at line :{}", &param.name);
                 }
             }
         }
