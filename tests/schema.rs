@@ -24,8 +24,8 @@ fn test_schema() {
     schema.set("output", "Output streem", true, test_true());
     schema.set("test_key", "This is testparam", true, test_true());
     schema.set("test_req", "Test not Required param", false, test_true());
-    println!("Result check() schema is \n{}", schema.check(&config));
-    println!("Result info() schema is \n{}", schema.info());
+    schema.check(&config);
+    println!("\n Info: {}", schema.info());
     //println!("{}",range(v));
     //println!("{:#?}", config); 
     //println!("{:#?}", schema);

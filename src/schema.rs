@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::boxed::Box;
 
 use super::config::Config;
+pub use crate::error::{Error, Result};
 
 
 //#[derive(Debug, Default)]
@@ -47,8 +48,7 @@ impl Schema {
     }
     
     #[inline]
-    pub fn check(&mut self, config: &Config) -> String {
-        let mut result = String::new();
+    pub fn check(&mut self, config: &Config) ->  Result<&str> {
         for param in self.params.iter() {
             if config.get_str(&param.name) != None {
                 let check_func = (&param.validators)(config.get_str(&param.name).unwrap());
@@ -57,21 +57,18 @@ impl Schema {
                 }
                 else {
                     let line = config.get_line();
-                    return format!("Format Error at line {}: {}", line, &param.name)
+                    return Err(Error::Syntax(line, "problem whith check parametr"));
                 }
             }
             else{
                 self.check_list.insert(param.name.to_string(), false);
                 if param.required {                
                     let line = config.get_line();
-                    return format!("Syntax Error at line {}: {}", line, &param.name);
+                    return Err(Error::Syntax(line, "required config parametr missing"));
                 }
             }
         }
-        if result == "" {
-            result = "Ok".to_string();
-        }
-        result
+        Ok("ok")
     }
     
     #[inline]
