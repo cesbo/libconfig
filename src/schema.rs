@@ -56,13 +56,15 @@ impl Schema {
                     self.check_list.insert(param.name.to_string(), true);
                 }
                 else {
-                    return format!("Format Error at line :{}",  &param.name)
+                    let line = config.get_line();
+                    return format!("Format Error at line {}: {}", line, &param.name)
                 }
             }
             else{
                 self.check_list.insert(param.name.to_string(), false);
-                if param.required {
-                    return format!("Syntax Error at line :{}", &param.name);
+                if param.required {                
+                    let line = config.get_line();
+                    return format!("Syntax Error at line {}: {}", line, &param.name);
                 }
             }
         }
