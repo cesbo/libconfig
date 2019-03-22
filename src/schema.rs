@@ -5,18 +5,15 @@ use super::config::Config;
 pub use crate::error::{Error, Result};
 
 
-//#[derive(Debug, Default)]
 struct Param {
     name: String,
     description: String,
     required: bool,
-    validators: Box<Fn(&str) -> bool>,
+    validator: Box<Fn(&str) -> bool>,
 }
 
 
-//#[derive(Debug, Default)]
-pub struct Schema 
-{
+pub struct Schema {
     params: Vec<Param>,
     check_list: HashMap<String, bool>
 }
@@ -24,8 +21,7 @@ pub struct Schema
 
 impl Schema {
     #[inline]
-    pub fn new() -> Self
-    {
+    pub fn new() -> Self {
         Schema {
             params: Vec::new(),
             check_list: HashMap::new(),
@@ -33,7 +29,7 @@ impl Schema {
     }
         
     #[inline]
-    pub fn set<S,B: 'static>(&mut self, name: S, description: S, required: bool, validators: B)
+    pub fn set<S,B: 'static>(&mut self, name: S, description: S, required: bool, validator: B)
     where
         S: Into<String>,
         B: Fn(&str) -> bool, 
@@ -42,36 +38,29 @@ impl Schema {
             name: name.into(),
             description: description.into(),
             required: required,
-            validators: Box::new(validators),
+            validator: Box::new(validator),
         };
         self.params.push(param);
     }
     
-    #[inline]
-    pub fn check(&mut self, config: &Config) ->  Result<&str> {
+    pub fn check(&mut self, config: &Config) ->  Result<()> {
         for param in self.params.iter() {
-            if config.get_str(&param.name) != None {
-                let check_func = (&param.validators)(config.get_str(&param.name).unwrap());
-                if check_func{
+            if let Some(value) = config.get_str(&param.name) {
+                if (&param.validator)(value){
                     self.check_list.insert(param.name.to_string(), true);
+                } else {
+                    return Err(Error::Syntax(config.get_line(), "problem whith check parametr"));
                 }
-                else {
-                    let line = config.get_line();
-                    return Err(Error::Syntax(line, "problem whith check parametr"));
-                }
-            }
-            else{
+            } else {
                 self.check_list.insert(param.name.to_string(), false);
                 if param.required {                
-                    let line = config.get_line();
-                    return Err(Error::Syntax(line, "required config parametr missing"));
+                    return Err(Error::Syntax(config.get_line(), "required config parametr missing"));
                 }
             }
         }
-        Ok("ok")
+        Ok(())
     }
     
-    #[inline]
     pub fn info(&mut self) -> String {
         let mut result = String::new();
         for param in self.params.iter() {
