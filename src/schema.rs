@@ -9,7 +9,7 @@ struct Param {
     name: String,
     description: String,
     required: bool,
-    validator: Box<Fn(&str) -> bool>,
+    validator: Option<Box<Fn(&str) -> bool>>,
 }
 
 
@@ -38,7 +38,7 @@ impl Schema {
             name: name.into(),
             description: description.into(),
             required: required,
-            validator: Box::new(validator),
+            validator: Some(Box::new(validator)),
         };
         self.params.push(param);
     }
@@ -46,15 +46,15 @@ impl Schema {
     pub fn check(&mut self, config: &Config) ->  Result<()> {
         for param in self.params.iter() {
             if let Some(value) = config.get_str(&param.name) {
-                if (&param.validator)(value){
+                if let Some(validator) = &param.validator {
                     self.check_list.insert(param.name.to_string(), true);
                 } else {
                     return Err(Error::Syntax(config.get_line(), "problem whith check parametr"));
                 }
             } else {
                 self.check_list.insert(param.name.to_string(), false);
-                if param.required {                
-                    return Err(Error::Syntax(config.get_line(), "required config parametr missing"));
+                if param.required { 
+                    return Err(Error::Syntax(config.get_line(), "missing required config parametr"));
                 }
             }
         }
