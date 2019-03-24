@@ -1,21 +1,22 @@
-use std::collections::HashMap;
 use std::boxed::Box;
 
 use super::config::Config;
 pub use crate::error::{Error, Result};
 
 
+type OptionBox<T> = Option<Box<T>>;
+
 struct Param {
     name: String,
     description: String,
     required: bool,
-    validator: Option<Box<Fn(&str) -> bool>>,
+    //validator: OptionBox,
+    validator: OptionBox<Fn(&str) -> bool>,
 }
 
 
 pub struct Schema {
-    params: Vec<Param>,
-    check_list: HashMap<String, bool>
+    params: Vec<Param>
 }
 
 
@@ -23,8 +24,7 @@ impl Schema {
     #[inline]
     pub fn new() -> Self {
         Schema {
-            params: Vec::new(),
-            check_list: HashMap::new(),
+            params: Vec::new()
         }
     }
         
@@ -32,12 +32,14 @@ impl Schema {
     pub fn set<S,B: 'static>(&mut self, name: S, description: S, required: bool, validator: B)
     where
         S: Into<String>,
-        B: Fn(&str) -> bool, 
+        B: Fn(&str) -> bool,
+        //B: Into<OptionBox>,  
     {
         let param = Param {
             name: name.into(),
             description: description.into(),
             required: required,
+            //validator: validator,
             validator: Some(Box::new(validator)),
         };
         self.params.push(param);
@@ -45,17 +47,19 @@ impl Schema {
     
     pub fn check(&mut self, config: &Config) ->  Result<()> {
         for param in self.params.iter() {
-            if let Some(value) = config.get_str(&param.name) {
-                if let Some(validator) = &param.validator {
-                    self.check_list.insert(param.name.to_string(), true);
-                } else {
-                    return Err(Error::Syntax(config.get_line(), "problem whith check parametr"));
-                }
-            } else {
-                self.check_list.insert(param.name.to_string(), false);
-                if param.required { 
+            if param.required {
+                let name = config.get_str(&param.name);
+                if name == None {
                     return Err(Error::Syntax(config.get_line(), "missing required config parametr"));
                 }
+                if let Some(v) = &param.validator {
+                    if v(name.unwrap()) == false {
+                        return Err(Error::Syntax(config.get_line(), "problem whith check parametr"));
+                    }           
+                }
+                /*if (&param.validator)(config.get_str(&param.name).unwrap()) = false {
+                    return Err(Error::Syntax(config.get_line(), "problem whith check parametr"));
+                }*/
             }
         }
         Ok(())

@@ -18,6 +18,18 @@ fn range(r: std::ops::Range<usize>) -> impl Fn(&str) -> bool {
 
 #[test]
 fn test_schema() {
+    println!("===================================");
+    println!("test Schema whith ok parametr:");
+    let mut schema = schema::Schema::new();
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    schema.set("output", "Output streem", true, test_true());
+    match schema.check(&config) {
+        Ok(_) => {},
+        Err(e) => println!("Error: {}", e.to_string()),
+    }
+    println!("\n Info: {}", schema.info());
+    println!("===================================");
+    println!("test Schema whith missing parametr:");
     let mut schema = schema::Schema::new();
     let config = Config::open("tests/data/t1.conf").unwrap();
     schema.set("u16", "Test u16", true, range(0 .. 2110));
@@ -29,7 +41,35 @@ fn test_schema() {
         Err(e) => println!("Error: {}", e.to_string()),
     }
     println!("\n Info: {}", schema.info());
-    //println!("{}",range(v));
-    //println!("{:#?}", config); 
-    //println!("{:#?}", schema);
+    println!("===================================");
+    println!("test Schema whith trouble range:");
+    let mut schema = schema::Schema::new();
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    schema.set("u16", "Test u16", true, range(0 .. 3));
+    match schema.check(&config) {
+        Ok(_) => {},
+        Err(e) => println!("Error: {}", e.to_string()),
+    }
+    println!("\n Info: {}", schema.info());
+    println!("===================================");
+    println!("test Schema whith normal range:");
+    let mut schema = schema::Schema::new();
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    schema.set("u16", "Test u16", true, range(0 .. 65000));
+    match schema.check(&config) {
+        Ok(_) => {},
+        Err(e) => println!("Error: {}", e.to_string()),
+    }
+    println!("\n Info: {}", schema.info());
+    println!("===================================");
+    /*println!("test Schema whithout validator:");
+    let mut schema = schema::Schema::new();
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    schema.set("u16", "Test u16", true, test_true());
+    match schema.check(&config) {
+        Ok(_) => {},
+        Err(e) => println!("Error: {}", e.to_string()),
+    }
+    println!("\n Info: {}", schema.info());
+    println!("===================================");*/
 }
