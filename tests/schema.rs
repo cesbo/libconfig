@@ -62,6 +62,22 @@ fn test_schema() {
     }
     println!("\n Info: {}", schema.info());
     println!("===================================");
+    println!("test RECURSIVE Schema whith normal range:");
+    let mut schema = schema::Schema::new();
+    let mut multiplex = schema::Schema::new();
+    let mut service = schema::Schema::new();
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    schema.set("u16", "Test u16", true, range(0 .. 65000));
+    multiplex.set("tsid", "Number of transport", true, range(0 .. 65000));
+    service.set("pnr", "Program name", true, range(0 .. 65000));
+    multiplex.set_nested(service);
+    schema.set_nested(multiplex);
+    match schema.check(&config) {
+        Ok(_) => {},
+        Err(e) => println!("Error: {}", e.to_string()),
+    }
+    println!("\n Info: {}", schema.info());
+    println!("===================================");
     /*println!("test Schema whithout validator:");
     let mut schema = schema::Schema::new();
     let config = Config::open("tests/data/t1.conf").unwrap();

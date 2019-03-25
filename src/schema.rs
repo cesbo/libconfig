@@ -10,13 +10,13 @@ struct Param {
     name: String,
     description: String,
     required: bool,
-    //validator: OptionBox,
     validator: OptionBox<Fn(&str) -> bool>,
 }
 
 
 pub struct Schema {
-    params: Vec<Param>
+    params: Vec<Param>,
+    nested: Vec<Schema>,
 }
 
 
@@ -24,7 +24,8 @@ impl Schema {
     #[inline]
     pub fn new() -> Self {
         Schema {
-            params: Vec::new()
+            params: Vec::new(),
+            nested: Vec::new(),
         }
     }
         
@@ -32,23 +33,31 @@ impl Schema {
     pub fn set<S,B: 'static>(&mut self, name: S, description: S, required: bool, validator: B)
     where
         S: Into<String>,
-        B: Fn(&str) -> bool,
-        //B: Into<OptionBox>,  
+        B: Fn(&str) -> bool, 
     {
         let param = Param {
             name: name.into(),
             description: description.into(),
             required: required,
-            //validator: validator,
             validator: Some(Box::new(validator)),
         };
         self.params.push(param);
     }
     
+    #[inline]
+    pub fn set_nested(&mut self, nested: Schema) {
+        self.nested.push(nested);
+    }
+    
     pub fn check(&mut self, config: &Config) ->  Result<()> {
-        for param in self.params.iter() {
+        self.check_schema(self,config)
+    }
+    
+    fn check_schema(&self, schema: &Schema, config: &Config) ->  Result<()> {
+        for param in schema.params.iter() {
             if param.required {
                 let name = config.get_str(&param.name);
+                //println!("name is {:?}", &param.name);
                 if name == None {
                     return Err(Error::Syntax(config.get_line(), "missing required config parametr"));
                 }
@@ -57,9 +66,14 @@ impl Schema {
                         return Err(Error::Syntax(config.get_line(), "problem whith check parametr"));
                     }           
                 }
-                /*if (&param.validator)(config.get_str(&param.name).unwrap()) = false {
-                    return Err(Error::Syntax(config.get_line(), "problem whith check parametr"));
-                }*/
+            }
+        }
+        for nested_config in config.iter() {
+            for nested_schema in schema.nested.iter() {
+                match self.check_schema(nested_schema, nested_config) {
+                    Ok(_) => {},
+                    Err(e) => return Err(e),
+                }
             }
         }
         Ok(())
