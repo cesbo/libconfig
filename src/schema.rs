@@ -20,15 +20,12 @@ pub struct Schema {
 }
 
 
-type OptionBox<T> = Option<Box<T>>;
+struct Validator(Option<Box<Fn() -> bool>>);
 
 
-struct Validator(OptionBox<Fn() -> bool>);
-
-
-impl From<OptionBox<Fn() -> bool>> for Validator {
+impl From<Option<Box<Fn() -> bool>>> for Validator {
     #[inline]
-    fn from(f: OptionBox<Fn() -> bool>) -> Validator {
+    fn from(f: Option<Box<Fn() -> bool>>) -> Validator {
         Validator(f)
     }
 }
