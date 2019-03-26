@@ -78,14 +78,14 @@ fn test_schema() {
     }
     println!("\n Info: \n{}", schema.info());
     println!("===================================");
-    /*println!("test Schema whithout validator:");
+    println!("test Schema whithout validator:");
     let mut schema = schema::Schema::new("");
     let config = Config::open("tests/data/t1.conf").unwrap();
-    schema.set("u16", "Test u16", true, test_true());
+    schema.set("u16", "Test u16", true, None);
     match schema.check(&config) {
         Ok(_) => {},
         Err(e) => println!("Error: {}", e.to_string()),
     }
     println!("\n Info: {}", schema.info());
-    println!("===================================");*/
+    println!("===================================");
 }
