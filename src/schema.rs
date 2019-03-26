@@ -20,12 +20,12 @@ pub struct Schema {
 }
 
 
-struct Validator(Option<Box<Fn() -> bool>>);
+struct Validator(Option<Box<Fn(&str) -> bool>>);
 
 
-impl From<Option<Box<Fn() -> bool>>> for Validator {
+impl From<Option<Box<Fn(&str) -> bool>>> for Validator {
     #[inline]
-    fn from(f: Option<Box<Fn() -> bool>>) -> Validator {
+    fn from(f: Option<Box<Fn(&str) -> bool>>) -> Validator {
         Validator(f)
     }
 }
@@ -33,7 +33,7 @@ impl From<Option<Box<Fn() -> bool>>> for Validator {
 
 impl<F: 'static> From<F> for Validator
 where
-    F: Fn() -> bool,
+    F: Fn(&str) -> bool,
 {
     #[inline]
     fn from(f: F) -> Validator {
@@ -83,7 +83,7 @@ impl Schema {
                     return Err(Error::Syntax(config.get_line(), "missing required config parametr"));
                 }
             }
-            if let Some(v) = &param.validator {
+            if let Some(v) = &param.validator.0 {
                 if v(name.unwrap()) == false {
                     return Err(Error::Syntax(config.get_line(), "problem whith check parametr"));
                 }
