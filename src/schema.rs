@@ -15,6 +15,7 @@ struct Param {
 
 
 pub struct Schema {
+    name: String,
     params: Vec<Param>,
     nested: Vec<Schema>,
 }
@@ -22,8 +23,12 @@ pub struct Schema {
 
 impl Schema {
     #[inline]
-    pub fn new() -> Self {
+    pub fn new<S>(name: S) -> Self 
+    where
+        S: Into<String>,
+    {
         Schema {
+            name: name.into(),
             params: Vec::new(),
             nested: Vec::new(),
         }
@@ -45,7 +50,7 @@ impl Schema {
     }
     
     #[inline]
-    pub fn set_nested(&mut self, nested: Schema) {
+    pub fn push(&mut self, nested: Schema) {
         self.nested.push(nested);
     }
     
@@ -57,7 +62,7 @@ impl Schema {
         for param in schema.params.iter() {
             if param.required {
                 let name = config.get_str(&param.name);
-                //println!("name is {:?}", &param.name);
+                println!("name is {:?}", &param.name);
                 if name == None {
                     return Err(Error::Syntax(config.get_line(), "missing required config parametr"));
                 }
@@ -70,9 +75,11 @@ impl Schema {
         }
         for nested_config in config.iter() {
             for nested_schema in schema.nested.iter() {
-                match self.check_schema(nested_schema, nested_config) {
-                    Ok(_) => {},
-                    Err(e) => return Err(e),
+                if nested_schema.name == nested_config.get_name() {
+                    match self.check_schema(nested_schema, nested_config) {
+                        Ok(_) => {},
+                        Err(e) => return Err(e),
+                    }
                 }
             }
         }
@@ -82,10 +89,7 @@ impl Schema {
     pub fn info(&mut self) -> String {
         let mut result = String::new();
         for param in self.params.iter() {
-            result.push_str(&param.name);
-            result.push_str(" - ");
-            result.push_str(&param.description);
-            result.push_str("\n");
+            result.push_str(&format!("{} - {} \n", &param.name,&param.description));
         }
         result
     }
