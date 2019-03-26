@@ -1,23 +1,47 @@
 use std::boxed::Box;
+use std::collections::HashMap;
 
 use super::config::Config;
 pub use crate::error::{Error, Result};
 
 
-type OptionBox<T> = Option<Box<T>>;
-
 struct Param {
     name: String,
     description: String,
     required: bool,
-    validator: OptionBox<Fn(&str) -> bool>,
+    validator: Validator,
 }
 
 
 pub struct Schema {
     name: String,
     params: Vec<Param>,
-    nested: Vec<Schema>,
+    nested: HashMap<String, Schema>,
+}
+
+
+type OptionBox<T> = Option<Box<T>>;
+
+
+struct Validator(OptionBox<Fn() -> bool>);
+
+
+impl From<OptionBox<Fn() -> bool>> for Validator {
+    #[inline]
+    fn from(f: OptionBox<Fn() -> bool>) -> Validator {
+        Validator(f)
+    }
+}
+
+
+impl<F: 'static> From<F> for Validator
+where
+    F: Fn() -> bool,
+{
+    #[inline]
+    fn from(f: F) -> Validator {
+        Validator(Some(Box::new(f)))
+    }
 }
 
 
@@ -30,57 +54,62 @@ impl Schema {
         Schema {
             name: name.into(),
             params: Vec::new(),
-            nested: Vec::new(),
+            nested: HashMap::new(),
         }
     }
         
     #[inline]
-    pub fn set<S,B: 'static>(&mut self, name: S, description: S, required: bool, validator: B)
+    pub fn set<S, B: 'static>(&mut self, name: S, description: S, required: bool, validator: B)
     where
         S: Into<String>,
-        B: Fn(&str) -> bool, 
+        B: Into<Validator>, 
     {
         let param = Param {
             name: name.into(),
             description: description.into(),
             required: required,
-            validator: Some(Box::new(validator)),
+            validator: validator.into(),
         };
         self.params.push(param);
     }
     
     #[inline]
     pub fn push(&mut self, nested: Schema) {
-        self.nested.push(nested);
+        self.nested.insert((&nested.name).to_string(),nested);
     }
-    
-    pub fn check(&mut self, config: &Config) ->  Result<()> {
-        self.check_schema(self,config)
-    }
-    
-    fn check_schema(&self, schema: &Schema, config: &Config) ->  Result<()> {
-        for param in schema.params.iter() {
+        
+    pub fn check(&self, config: &Config) ->  Result<()> {
+        for param in self.params.iter() {
+            let name = config.get_str(&param.name);
             if param.required {
-                let name = config.get_str(&param.name);
                 if name == None {
                     return Err(Error::Syntax(config.get_line(), "missing required config parametr"));
                 }
-                if let Some(v) = &param.validator {
-                    if v(name.unwrap()) == false {
-                        return Err(Error::Syntax(config.get_line(), "problem whith check parametr"));
-                    }           
+            }
+            if let Some(v) = &param.validator {
+                if v(name.unwrap()) == false {
+                    return Err(Error::Syntax(config.get_line(), "problem whith check parametr"));
                 }
             }
         }
         for nested_config in config.iter() {
-            for nested_schema in schema.nested.iter() {
+            match self.nested.get(nested_config.get_name()) {
+                Some(nested_schema) => {
+                    match nested_schema.check(nested_config) {
+                        Ok(_) => {},
+                        Err(e) => return Err(e),
+                    }
+                },
+                _ => {},
+            }
+            /*for nested_schema in self.nested.iter() {
                 if nested_schema.name == nested_config.get_name() {
-                    match self.check_schema(nested_schema, nested_config) {
+                    match nested_schema.check(nested_config) {
                         Ok(_) => {},
                         Err(e) => return Err(e),
                     }
                 }
-            }
+            }*/
         }
         Ok(())
     }
