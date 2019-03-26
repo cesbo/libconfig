@@ -62,7 +62,6 @@ impl Schema {
         for param in schema.params.iter() {
             if param.required {
                 let name = config.get_str(&param.name);
-                println!("name is {:?}", &param.name);
                 if name == None {
                     return Err(Error::Syntax(config.get_line(), "missing required config parametr"));
                 }
@@ -89,7 +88,7 @@ impl Schema {
     pub fn info(&mut self) -> String {
         let mut result = String::new();
         for param in self.params.iter() {
-            result.push_str(&format!("{} - {} \n", &param.name,&param.description));
+            result.push_str(&format!("- {} - {} \n", &param.name,&param.description));
         }
         result
     }

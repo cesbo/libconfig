@@ -76,7 +76,7 @@ fn test_schema() {
         Ok(_) => {},
         Err(e) => println!("Error: {}", e.to_string()),
     }
-    println!("\n Info: {}", schema.info());
+    println!("\n Info: \n{}", schema.info());
     println!("===================================");
     /*println!("test Schema whithout validator:");
     let mut schema = schema::Schema::new("");
