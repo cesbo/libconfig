@@ -68,7 +68,7 @@ impl Schema {
         let param = Param {
             name: name.into(),
             description: description.into(),
-            required: required,
+            required,
             validator: validator.into(),
         };
         self.params.push(param);
@@ -82,15 +82,14 @@ impl Schema {
     pub fn check(&self, config: &Config) ->  Result<()> {
         for param in self.params.iter() {
             let name = config.get_str(&param.name);
-            if param.required {
-                if name == None {
-                    return Err(Error::Syntax(config.get_line(), "missing required config parametr"));
+            if let Some(_value) = name {
+                if let Some(v) = &param.validator.0 {
+                    if !v(name.unwrap()) {
+                        return Err(Error::Syntax(config.get_line(), "problem whith check parametr"));
+                    }
                 }
-            }
-            if let Some(v) = &param.validator.0 {
-                if v(name.unwrap()) == false {
-                    return Err(Error::Syntax(config.get_line(), "problem whith check parametr"));
-                }
+            } else if param.required {
+                return Err(Error::Syntax(config.get_line(), "missing required config parametr"));
             }
         }
         for nested_config in config.iter() {
@@ -113,14 +112,14 @@ impl Schema {
     fn info_section(&self, result: &mut String, level: usize) {
         if level > 0 {
             result.push_str(&format!("\n{0:#>1$} {2}\n", "", level, self.name));
-            if self.description != "" {
+            if ! self.description.is_empty() {
                 result.push_str(&format!("; {}\n", self.description));
             }
         }
         for param in self.params.iter() {
-            result.push_str(&format!("{} - {} \n", &param.name,&param.description));
+            result.push_str(&format!("{} - {}\n", &param.name, &param.description));
         }
-        for (_nested_name, nested) in self.nested.iter() {
+        for nested in self.nested.values() {
             nested.info_section(result, level + 1);
         }
     }
