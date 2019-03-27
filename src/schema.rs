@@ -20,7 +20,7 @@ pub struct Schema {
 }
 
 
-struct Validator(Option<Box<Fn(&str) -> bool>>);
+pub struct Validator(Option<Box<Fn(&str) -> bool>>);
 
 
 impl From<Option<Box<Fn(&str) -> bool>>> for Validator {
@@ -101,9 +101,26 @@ impl Schema {
     }
     
     pub fn info(&mut self) -> String {
+        self.info_level(self, 0)
+    }
+    
+    fn info_level(&self, schema: &Schema, level: u8) -> String {
         let mut result = String::new();
-        for param in self.params.iter() {
-            result.push_str(&format!("- {} - {} \n", &param.name,&param.description));
+        if level > 0 {
+            result.push_str("\n");
+        }
+        for _x in 0..level {
+            result.push_str("#");
+        }
+        if &schema.name != "" {
+            result.push_str(&format!(" {}\n", schema.name));
+        }
+        for param in schema.params.iter() {
+            result.push_str(&format!("{} - {} \n", &param.name,&param.description));
+        }
+        let nested_level = level + 1;
+        for (_nested_name, nested) in schema.nested.iter() {
+            result.push_str(&(self.info_level(&nested,nested_level)));
         }
         result
     }
