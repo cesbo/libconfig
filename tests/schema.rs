@@ -20,7 +20,7 @@ fn range(r: std::ops::Range<usize>) -> impl Fn(&str) -> bool {
 fn test_schema() {
     println!("===================================");
     println!("test Schema whith ok parametr:");
-    let mut schema = schema::Schema::new("");
+    let mut schema = schema::Schema::new("","");
     let config = Config::open("tests/data/t1.conf").unwrap();
     schema.set("output", "Output streem", true, test_true());
     match schema.check(&config) {
@@ -30,7 +30,7 @@ fn test_schema() {
     println!("\n Info: {}", schema.info());
     println!("===================================");
     println!("test Schema whith missing parametr:");
-    let mut schema = schema::Schema::new("");
+    let mut schema = schema::Schema::new("","");
     let config = Config::open("tests/data/t1.conf").unwrap();
     schema.set("u16", "Test u16", true, range(0 .. 2110));
     schema.set("output", "Output streem", true, test_true());
@@ -43,7 +43,7 @@ fn test_schema() {
     println!("\n Info: \n{}", schema.info());
     println!("===================================");
     println!("test Schema whith trouble range:");
-    let mut schema = schema::Schema::new("");
+    let mut schema = schema::Schema::new("","");
     let config = Config::open("tests/data/t1.conf").unwrap();
     schema.set("u16", "Test u16", true, range(0 .. 3));
     match schema.check(&config) {
@@ -53,7 +53,7 @@ fn test_schema() {
     println!("\n Info: \n{}", schema.info());
     println!("===================================");
     println!("test Schema whith normal range:");
-    let mut schema = schema::Schema::new("");
+    let mut schema = schema::Schema::new("","");
     let config = Config::open("tests/data/t1.conf").unwrap();
     schema.set("u16", "Test u16", true, range(0 .. 65000));
     match schema.check(&config) {
@@ -63,7 +63,7 @@ fn test_schema() {
     println!("\n Info: \n{}", schema.info());
     println!("===================================");
     println!("test Schema whithout validator:");
-    let mut schema = schema::Schema::new("");
+    let mut schema = schema::Schema::new("","");
     let config = Config::open("tests/data/t1.conf").unwrap();
     schema.set("u16", "Test u16", true, None);
     match schema.check(&config) {
@@ -73,9 +73,9 @@ fn test_schema() {
     println!("\n Info: \n{}", schema.info());
     println!("===================================");
     println!("test RECURSIVE Schema whith normal range:");
-    let mut schema = schema::Schema::new("");
-    let mut multiplex = schema::Schema::new("multiplex");
-    let mut service = schema::Schema::new("service");
+    let mut schema = schema::Schema::new("","");
+    let mut multiplex = schema::Schema::new("multiplex","simple dvb multiplex");
+    let mut service = schema::Schema::new("service","");
     let config = Config::open("tests/data/t1.conf").unwrap();
     schema.set("u16", "Test u16", true, range(0 .. 65000));
     multiplex.set("tsid", "Number of transport", true, range(0 .. 65000));

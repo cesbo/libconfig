@@ -17,6 +17,7 @@ struct Param {
 
 pub struct Schema {
     name: String,
+    description: String,
     params: Vec<Param>,
     nested: HashMap<String, Schema>,
 }
@@ -46,12 +47,13 @@ where
 
 impl Schema {
     #[inline]
-    pub fn new<S>(name: S) -> Self 
+    pub fn new<S>(name: S, description: S) -> Self 
     where
         S: Into<String>,
     {
         Schema {
             name: name.into(),
+            description: description.into(),
             params: Vec::new(),
             nested: HashMap::new(),
         }
@@ -110,7 +112,10 @@ impl Schema {
     
     fn info_section(&self, result: &mut String, level: usize) {
         if level > 0 {
-            result.push_str(&format!("\n{0:#>1$} {2} \n", "", level, self.name));
+            result.push_str(&format!("\n{0:#>1$} {2}\n", "", level, self.name));
+            if self.description != "" {
+                result.push_str(&format!("; {}\n", self.description));
+            }
         }
         for param in self.params.iter() {
             result.push_str(&format!("{} - {} \n", &param.name,&param.description));
