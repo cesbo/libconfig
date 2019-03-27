@@ -1,8 +1,10 @@
-use std::boxed::Box;
 use std::collections::HashMap;
 
 use super::config::Config;
-pub use crate::error::{Error, Result};
+pub use crate::error::{
+    Error,
+    Result,
+};
 
 
 struct Param {
@@ -101,27 +103,20 @@ impl Schema {
     }
     
     pub fn info(&mut self) -> String {
-        self.info_level(self, 0)
+        let mut result = String::new();
+        self.info_section(&mut result, 0);
+        result
     }
     
-    fn info_level(&self, schema: &Schema, level: u8) -> String {
-        let mut result = String::new();
+    fn info_section(&self, result: &mut String, level: usize) {
         if level > 0 {
-            result.push_str("\n");
+            result.push_str(&format!("\n{0:#>1$} {2} \n", "", level, self.name));
         }
-        for _x in 0..level {
-            result.push_str("#");
-        }
-        if &schema.name != "" {
-            result.push_str(&format!(" {}\n", schema.name));
-        }
-        for param in schema.params.iter() {
+        for param in self.params.iter() {
             result.push_str(&format!("{} - {} \n", &param.name,&param.description));
         }
-        let nested_level = level + 1;
-        for (_nested_name, nested) in schema.nested.iter() {
-            result.push_str(&(self.info_level(&nested,nested_level)));
+        for (_nested_name, nested) in self.nested.iter() {
+            nested.info_section(result, level + 1);
         }
-        result
     }
 }
