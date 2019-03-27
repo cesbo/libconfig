@@ -56,7 +56,7 @@ impl Schema {
     }
         
     #[inline]
-    pub fn set<S, B: 'static>(&mut self, name: S, description: S, required: bool, validator: B)
+    pub fn set<S, B>(&mut self, name: S, description: S, required: bool, validator: B)
     where
         S: Into<String>,
         B: Into<Validator>, 
@@ -72,7 +72,7 @@ impl Schema {
     
     #[inline]
     pub fn push(&mut self, nested: Schema) {
-        self.nested.insert((&nested.name).to_string(),nested);
+        self.nested.insert(nested.name.clone(),nested);
     }
         
     pub fn check(&self, config: &Config) ->  Result<()> {
@@ -90,23 +90,12 @@ impl Schema {
             }
         }
         for nested_config in config.iter() {
-            match self.nested.get(nested_config.get_name()) {
-                Some(nested_schema) => {
-                    match nested_schema.check(nested_config) {
-                        Ok(_) => {},
-                        Err(e) => return Err(e),
-                    }
-                },
-                _ => {},
-            }
-            /*for nested_schema in self.nested.iter() {
-                if nested_schema.name == nested_config.get_name() {
-                    match nested_schema.check(nested_config) {
-                        Ok(_) => {},
-                        Err(e) => return Err(e),
-                    }
+            if let Some(nested_schema) = self.nested.get(nested_config.get_name()){
+                match nested_schema.check(nested_config) {
+                    Ok(_) => {},
+                    Err(e) => return Err(e),
                 }
-            }*/
+            }
         }
         Ok(())
     }
