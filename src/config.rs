@@ -24,6 +24,14 @@ impl Property {
             value: value.to_string(),
         }
     }
+    
+    pub fn get_line(&self) -> usize {
+        self.line
+    }
+    
+    pub fn get_value(&self) -> &str {
+        self.value.as_str()
+    }
 }
 
 
@@ -70,7 +78,7 @@ impl Config {
     }
 
     #[inline]
-    fn get_property(&self, name: &str) -> Option<&Property> {
+    pub fn get_property(&self, name: &str) -> Option<&Property> {
         for p in &self.items {
             if p.name == name {
                 return Some(&p);

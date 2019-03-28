@@ -46,7 +46,6 @@ where
 
 
 impl Schema {
-    #[inline]
     pub fn new<S>(name: S, description: S) -> Self 
     where
         S: Into<String>,
@@ -58,8 +57,7 @@ impl Schema {
             nested: HashMap::new(),
         }
     }
-        
-    #[inline]
+    
     pub fn set<S, B>(&mut self, name: S, description: S, required: bool, validator: B)
     where
         S: Into<String>,
@@ -81,10 +79,10 @@ impl Schema {
         
     pub fn check(&self, config: &Config) ->  Result<()> {
         for param in self.params.iter() {
-            if let Some(value) = config.get_str(&param.name) {
+            if let Some(value) = config.get_property(&param.name) {
                 if let Some(v) = &param.validator.0 {
-                    if !v(value) {
-                        return Err(Error::Syntax(config.get_line(), "problem whith check parametr"));
+                    if ! v(&value.get_value()) {
+                        return Err(Error::Syntax(value.get_line(), "problem whith check parametr"));
                     }
                 }
             } else if param.required {
