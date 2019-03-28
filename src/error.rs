@@ -7,6 +7,7 @@ use std::{
 };
 
 
+#[derive(Debug)]
 pub enum Error {
     Syntax(usize, &'static str),
     ParseBoolError(usize, str::ParseBoolError),
