@@ -1,12 +1,16 @@
 use config::Config;
 use config::Schema;
 
-fn range(r: std::ops::Range<usize>) -> impl Fn(&str) -> bool {
-    move |s: &str| -> bool {
-        let v = s.parse().unwrap();
-        if r.start >= v || r.end <= v { return false }
-        true
-    }
+#[test]
+fn test_schema_range_validator() {
+    let f = Schema::range(100 .. 200);
+    assert!(f("150"));
+    assert!(f("100"));
+    assert!(f("200"));
+    assert!(f("0x80"));
+    assert!(! f("50"));
+    assert!(! f("250"));
+    assert!(! f("test"));
 }
 
 #[test]
@@ -45,7 +49,7 @@ fn test_schema_unrequred_whithout_parametr() {
 fn test_schema_range() {
     let mut schema = Schema::new("", "");
     let config = Config::open("tests/data/t1.conf").unwrap();
-    schema.set("u16", "Test u16", true, range(0 .. 65000));
+    schema.set("u16", "Test u16", true, Schema::range(0 .. 65000));
     schema.check(&config).unwrap();
 }
 
@@ -53,7 +57,7 @@ fn test_schema_range() {
 fn test_schema_out_range() {
     let mut schema = Schema::new("", "");
     let config = Config::open("tests/data/t1.conf").unwrap();
-    schema.set("u16", "Test u16", true, range(0 .. 1));
+    schema.set("u16", "Test u16", true, Schema::range(0 .. 1));
     assert!(schema.check(&config).is_err());
 }
 
@@ -61,7 +65,7 @@ fn test_schema_out_range() {
 fn test_schema_out_range_unrequred() {
     let mut schema = Schema::new("", "");
     let config = Config::open("tests/data/t1.conf").unwrap();
-    schema.set("u16", "Test u16", false, range(0 .. 1));
+    schema.set("u16", "Test u16", false, Schema::range(0 .. 1));
     assert!(schema.check(&config).is_err());
 }
 
@@ -95,7 +99,7 @@ fn test_schema_nested_range() {
     let mut multiplex = Schema::new("multiplex","simple dvb multiplex");
     let mut service = Schema::new("service","");
     let config = Config::open("tests/data/t1.conf").unwrap();
-    service.set("pnr", "Program name", true, range(0 .. 65000));
+    service.set("pnr", "Program name", true, Schema::range(0 .. 65000));
     multiplex.push(service);
     schema.push(multiplex);
     schema.check(&config).unwrap();
@@ -107,7 +111,7 @@ fn test_schema_nested_out_range() {
     let mut multiplex = Schema::new("multiplex","simple dvb multiplex");
     let mut service = Schema::new("service","");
     let config = Config::open("tests/data/t1.conf").unwrap();
-    service.set("pnr", "Program name", true, range(0 .. 1));
+    service.set("pnr", "Program name", true, Schema::range(0 .. 1));
     multiplex.push(service);
     schema.push(multiplex);
     assert!(schema.check(&config).is_err());
@@ -119,7 +123,7 @@ fn test_schema_nested_out_range_unrequred() {
     let mut multiplex = Schema::new("multiplex","simple dvb multiplex");
     let mut service = Schema::new("service","");
     let config = Config::open("tests/data/t1.conf").unwrap();
-    service.set("pnr", "Program name", false, range(0 .. 1));
+    service.set("pnr", "Program name", false, Schema::range(0 .. 1));
     multiplex.push(service);
     schema.push(multiplex);
     assert!(schema.check(&config).is_err());

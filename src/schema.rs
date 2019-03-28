@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ops::Range;
 
 use crate::config::Config;
 use crate::error::{
@@ -120,15 +121,25 @@ impl Schema {
     fn info_section(&self, result: &mut String, level: usize) {
         if level > 0 {
             result.push_str(&format!("\n{0:#>1$} {2}\n", "", level, self.name));
-            if ! self.description.is_empty() {
-                result.push_str(&format!("; {}\n", self.description));
-            }
+        }
+        if ! self.description.is_empty() {
+            result.push_str(&format!("; {}\n", self.description));
         }
         for item in &self.properties {
             result.push_str(&format!("{} - {}\n", &item.name, &item.description));
         }
         for schema in self.nested.values() {
             schema.info_section(result, level + 1);
+        }
+    }
+
+    pub fn range(r: Range<usize>) -> impl Fn(&str) -> bool {
+        move |s: &str| -> bool {
+            let (skip, radix) = if s.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
+            match usize::from_str_radix(&s[skip ..], radix) {
+                Ok(v) => (v >= r.start) && (v <= r.end),
+                _ => false,
+            }
         }
     }
 }
