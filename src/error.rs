@@ -1,7 +1,12 @@
-use std::{fmt, io, result, str, num};
+use std::{
+    fmt,
+    io,
+    result,
+    str,
+    num,
+};
 
 
-#[derive(Debug)]
 pub enum Error {
     Syntax(usize, &'static str),
     ParseBoolError(usize, str::ParseBoolError),
