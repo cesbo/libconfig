@@ -1,3 +1,25 @@
+///#config::schema
+///
+///Scheme for validating the configuration file.
+///
+///Method:
+///
+///`new(name,descripton)` - make new schema  
+///name - used on checking the configuration file
+///description - background information
+///
+///`set(name, description, required, validator)` - add information about schema parameter
+///name - config parametr name
+///description - background information
+///required - is parametr required
+///validator - validator function
+///
+///`push(nested)` - add nested schema
+///
+///`check(config)` - check config by schema
+///
+///`info()` - make info about schema parameters and nested schems
+///
 use std::collections::HashMap;
 
 use crate::config::Config;
