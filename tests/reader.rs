@@ -1,5 +1,4 @@
-extern crate config;
-use config::config::Config;
+use config::Config;
 
 #[test]
 fn test_reader() {

@@ -1,25 +1,3 @@
-///#config::schema
-///
-///Scheme for validating the configuration file.
-///
-///Method:
-///
-///`new(name,descripton)` - make new schema  
-///name - used on checking the configuration file
-///description - background information
-///
-///`set(name, description, required, validator)` - add information about schema parameter
-///name - config parametr name
-///description - background information
-///required - is parametr required
-///validator - validator function
-///
-///`push(nested)` - add nested schema
-///
-///`check(config)` - check config by schema
-///
-///`info()` - make info about schema parameters and nested schems
-///
 use std::collections::HashMap;
 
 use crate::config::Config;
@@ -32,7 +10,7 @@ use crate::error::{
 pub struct Validator(Option<Box<Fn(&str) -> bool>>);
 
 
-struct Param {
+struct Property {
     name: String,
     description: String,
     required: bool,
@@ -40,10 +18,11 @@ struct Param {
 }
 
 
+/// Scheme for validating the configuration file.
 pub struct Schema {
     name: String,
     description: String,
-    params: Vec<Param>,
+    properties: Vec<Property>,
     nested: HashMap<String, Schema>,
 }
 
@@ -68,63 +47,76 @@ where
 
 
 impl Schema {
-    pub fn new<S>(name: S, description: S) -> Self 
+    /// Creates new schema
+    ///
+    /// - `name` - section name
+    /// - `description` - section description
+    pub fn new<S>(name: S, description: S) -> Self
     where
         S: Into<String>,
     {
         Schema {
             name: name.into(),
             description: description.into(),
-            params: Vec::new(),
+            properties: Vec::new(),
             nested: HashMap::new(),
         }
     }
-    
+
+    /// Appends information about schema parameter
+    ///
+    /// - `name` - config parameter name
+    /// - `description` - parameter description
+    /// - `required` - is parameter required
+    /// - `validator` - validator function or `None`
     pub fn set<S, B>(&mut self, name: S, description: S, required: bool, validator: B)
     where
         S: Into<String>,
-        B: Into<Validator>, 
+        B: Into<Validator>,
     {
-        let param = Param {
+        let property = Property {
             name: name.into(),
             description: description.into(),
             required,
             validator: validator.into(),
         };
-        self.params.push(param);
+        self.properties.push(property);
     }
-    
+
+    /// Appends nested schema
     #[inline]
     pub fn push(&mut self, nested: Schema) {
         self.nested.insert(nested.name.clone(), nested);
     }
-        
+
+    /// Validates config with schema
     pub fn check(&self, config: &Config) ->  Result<()> {
-        for param in self.params.iter() {
-            if let Some(value) = config.get_property(&param.name) {
-                if let Some(v) = &param.validator.0 {
-                    if ! v(&value.get_value()) {
-                        return Err(Error::Syntax(value.get_line(), "problem whith check parametr"));
+        for item in &self.properties {
+            if let Some(property) = config.get_property(&item.name) {
+                if let Some(validator) = &item.validator.0 {
+                    if ! validator(&property.get_value()) {
+                        return Err(Error::Syntax(property.get_line(), "problem whith check parametr"));
                     }
                 }
-            } else if param.required {
+            } else if item.required {
                 return Err(Error::Syntax(config.get_line(), "missing required config parametr"));
             }
         }
-        for nested_config in config.iter() {
-            if let Some(nested_schema) = self.nested.get(nested_config.get_name()) {
-                nested_schema.check(nested_config)?;
+        for config in config.iter() {
+            if let Some(schema) = self.nested.get(config.get_name()) {
+                schema.check(config)?;
             }
         }
         Ok(())
     }
-    
+
+    /// Returns information about schema parameters and nested schemas
     pub fn info(&mut self) -> String {
         let mut result = String::new();
         self.info_section(&mut result, 0);
         result
     }
-    
+
     fn info_section(&self, result: &mut String, level: usize) {
         if level > 0 {
             result.push_str(&format!("\n{0:#>1$} {2}\n", "", level, self.name));
@@ -132,11 +124,11 @@ impl Schema {
                 result.push_str(&format!("; {}\n", self.description));
             }
         }
-        for param in self.params.iter() {
-            result.push_str(&format!("{} - {}\n", &param.name, &param.description));
+        for item in &self.properties {
+            result.push_str(&format!("{} - {}\n", &item.name, &item.description));
         }
-        for nested in self.nested.values() {
-            nested.info_section(result, level + 1);
+        for schema in self.nested.values() {
+            schema.info_section(result, level + 1);
         }
     }
 }

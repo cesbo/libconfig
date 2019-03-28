@@ -2,9 +2,12 @@ use std::io::{Read, BufRead, BufReader, Write, BufWriter};
 use std::fs::File;
 use std::path::Path;
 
-pub use crate::error::{Error, Result};
+use crate::error::{
+    Error,
+    Result,
+};
 
-#[derive(Debug, Default)]
+
 pub struct Property {
     line: usize,
     name: String,
@@ -13,39 +16,46 @@ pub struct Property {
 
 
 impl Property {
-    pub fn new<S,T>(name: S, value: T) -> Self
-    where
-        S: Into<String>,
-        T: ToString,
-    {
-        Property {
-            line: 0,
-            name: name.into(),
-            value: value.to_string(),
-        }
-    }
-    
+    #[inline]
     pub fn get_line(&self) -> usize {
         self.line
     }
-    
+
+    #[inline]
     pub fn get_value(&self) -> &str {
         self.value.as_str()
     }
 }
 
 
-#[derive(Debug, Default)]
-
+/// Ini-inspired configuration format
+///
+/// # Properties
+///
+/// Basic element, contains Key-Value pair devide with `=`. Example: `name = Value`
+/// White-spaces around line and around delimiter ignores.
+/// Each value is a string, without quotes.
+///
+/// # Sections
+///
+/// Section is a group of properties. The section name should be started with `#`. Example: `# section`
+/// All keys after the section declaration are associated with that section. Sections could be nested.
+/// The nested section name should containg one more `#` in the name. Example: `## nested`
+///
+/// # Comments
+///
+/// Comment line should be started with `;`. Example: `; comment`
+///
 pub struct Config {
     line: usize,
     name: String,
-    items: Vec<Property>,
+    properties: Vec<Property>,
     nested: Vec<Config>,
 }
 
 
 impl Config {
+    /// Creates new empty config with `name` (section name meaning)
     #[inline]
     pub fn new<S>(name: S) -> Self
     where
@@ -54,32 +64,47 @@ impl Config {
         Config {
             line: 0,
             name: name.into(),
-            items: Vec::new(),
+            properties: Vec::new(),
             nested: Vec::new(),
         }
     }
 
-    #[inline]
-    pub fn push<I>(&mut self, item: I)
+    /// Appends config property
+    pub fn set<S, T>(&mut self, name: S, value: T)
     where
-        I: ConfigPush,
+        S: Into<String>,
+        T: ToString,
     {
-        ConfigPush::config_push(item, self);
+        let property = Property {
+            line: 0,
+            name: name.into(),
+            value: value.to_string(),
+        };
+        self.properties.push(property);
     }
 
+    /// Appends nested config
+    #[inline]
+    pub fn push(&mut self, nested: Config) {
+        self.nested.push(nested);
+    }
+
+    /// Returns section name
     #[inline]
     pub fn get_name(&self) -> &str {
         self.name.as_str()
     }
 
+    /// Returns section line number
     #[inline]
     pub fn get_line(&self) -> usize {
         self.line
     }
 
+    /// Returns property
     #[inline]
     pub fn get_property(&self, name: &str) -> Option<&Property> {
-        for p in &self.items {
+        for p in &self.properties {
             if p.name == name {
                 return Some(&p);
             }
@@ -87,6 +112,7 @@ impl Config {
         None
     }
 
+    /// Returns property string value
     #[inline]
     pub fn get_str<'a>(&'a self, name: &str) -> Option<&'a str> {
         match self.get_property(name) {
@@ -95,6 +121,7 @@ impl Config {
         }
     }
 
+    /// Returns property typed value (boolean or numbers)
     #[inline]
     pub fn get<F>(&self, name: &str, opt: F) -> Result<F>
     where
@@ -106,23 +133,20 @@ impl Config {
         }
     }
 
+    /// Returns nested sections iterator
     #[inline]
     pub fn iter(&self) -> impl Iterator<Item = &Config> {
         self.nested.iter()
-    }    
-    
-    #[inline]
-    pub fn iter_items(&self) -> impl Iterator<Item = &Property> {
-        self.items.iter()
     }
 
+    /// Deserialize config
     pub fn parse<R: Read>(src: R) -> Result<Config> {
         let mut line = 0;
 
         let mut reader = BufReader::new(src);
         let mut buffer = String::new();
 
-        let mut root = Config::default();
+        let mut root = Config::new("");
         let mut last = &mut root;
 
         loop {
@@ -146,7 +170,7 @@ impl Config {
                 let section = Config {
                     line,
                     name: token.to_owned(),
-                    items: Vec::new(),
+                    properties: Vec::new(),
                     nested: Vec::new(),
                 };
 
@@ -168,7 +192,7 @@ impl Config {
                 None => return Err(Error::Syntax(line, "missing ‘=’ in property declaration")),
             };
 
-            last.items.push(Property {
+            last.properties.push(Property {
                 line,
                 name: (&token[.. skip]).trim_end().to_owned(),
                 value: (&token[skip + 1 ..]).trim().to_owned(),
@@ -178,6 +202,7 @@ impl Config {
         Ok(root)
     }
 
+    /// Opens config file
     #[inline]
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         Self::parse(File::open(path)?)
@@ -187,7 +212,7 @@ impl Config {
         if level > 0 {
             writeln!(dst, "\n{0:#>1$} {2}", "", level, &self.name)?;
         }
-        for p in &self.items {
+        for p in &self.properties {
             writeln!(dst, "{} = {}", &p.name, &p.value)?;
         }
         for s in &self.nested {
@@ -196,12 +221,14 @@ impl Config {
         Ok(())
     }
 
+    /// Serializes config
     #[inline]
     pub fn dump<W: Write>(&self, dst: W) -> Result<()> {
         let mut writer = BufWriter::new(dst);
         self.dump_section(&mut writer, 0)
     }
 
+    /// Saves config into file
     #[inline]
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         self.dump(File::create(path)?)
@@ -243,23 +270,3 @@ macro_rules! impl_get_number {
 
 
 impl_get_number!(u8, i8, u16, i16, u32, i32, u64, i64, usize, isize);
-
-
-/// A trait to abstract pushing a new Property or Config into Config
-pub trait ConfigPush {
-    fn config_push(self, s: &mut Config);
-}
-
-
-impl ConfigPush for Property {
-    fn config_push(self, s: &mut Config) {
-        s.items.push(self);
-    }
-}
-
-
-impl ConfigPush for Config {
-    fn config_push(self, s: &mut Config) {
-        s.nested.push(self);
-    }
-}

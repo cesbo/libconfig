@@ -1,29 +1,28 @@
 use std::fs;
 
-extern crate config;
-use config::{Config, Property};
+use config::Config;
 
 #[test]
 fn test_writer() {
     let mut config = Config::new("");
-    config.push(Property::new("xmltv", "/projects/opt/discovery.xml"));
-    config.push(Property::new("output", "udp://127.0.0.1:10000"));
-    config.push(Property::new("u16", 1234));
-    config.push(Property::new("bool", true));
+    config.set("xmltv", "/projects/opt/discovery.xml");
+    config.set("output", "udp://127.0.0.1:10000");
+    config.set("u16", 1234);
+    config.set("bool", true);
 
     let mut m = Config::new("multiplex");
-    m.push(Property::new("tsid", 1));
+    m.set("tsid", 1);
 
     let mut s = Config::new("service");
-    s.push(Property::new("name", "🐽"));
-    s.push(Property::new("pnr", 1));
-    s.push(Property::new("xmltv-id", "discovery-channel"));
+    s.set("name", "🐽");
+    s.set("pnr", 1);
+    s.set("xmltv-id", "discovery-channel");
     m.push(s);
 
     let mut s = Config::new("service");
-    s.push(Property::new("xmltv", "/projects/opt/yamal.xml"));
-    s.push(Property::new("pnr", 1185));
-    s.push(Property::new("xmltv-id", "yamal-region"));
+    s.set("xmltv", "/projects/opt/yamal.xml");
+    s.set("pnr", 1185);
+    s.set("xmltv-id", "yamal-region");
     m.push(s);
 
     config.push(m);
