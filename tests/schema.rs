@@ -2,12 +2,6 @@ extern crate config;
 use config::config::Config;
 use config::schema;
 
-fn test_true() -> impl Fn(&str) -> bool {
-    move |_v: &str| -> bool { 
-        true
-    }
-}
-
 fn range(r: std::ops::Range<usize>) -> impl Fn(&str) -> bool {
     move |s: &str| -> bool { 
         let v = s.parse().unwrap();
@@ -17,139 +11,118 @@ fn range(r: std::ops::Range<usize>) -> impl Fn(&str) -> bool {
 }
 
 #[test]
-fn test_schema() {
-    println!("===================================");
-    println!("test Schema whith ok parametr:");
-    let mut schema = schema::Schema::new("","");
+fn test_schema_ok() {
+    let mut schema = schema::Schema::new("", "");
     let config = Config::open("tests/data/t1.conf").unwrap();
-    schema.set("output", "Output streem", true, test_true());
-    match schema.check(&config) {
-        Ok(_) => {},
-        Err(e) => println!("Error: {}", e.to_string()),
-    }
-    println!("\n Info: {}", schema.info());
-    println!("===================================");
-    println!("test Schema whith missing parametr:");
-    let mut schema = schema::Schema::new("","");
-    let config = Config::open("tests/data/t1.conf").unwrap();
-    schema.set("u16", "Test u16", true, range(0 .. 2110));
-    schema.set("output", "Output streem", true, test_true());
-    schema.set("test_key", "This is testparam", true, test_true());
-    schema.set("test_req", "Test not Required param", false, test_true());
-    match schema.check(&config) {
-        Ok(_) => {},
-        Err(e) => println!("Error: {}", e.to_string()),
-    }
-    println!("\n Info: \n{}", schema.info());
-    println!("===================================");
-    println!("test Schema whith trouble range:");
-    let mut schema = schema::Schema::new("","");
-    let config = Config::open("tests/data/t1.conf").unwrap();
-    schema.set("u16", "Test u16", true, range(0 .. 3));
-    match schema.check(&config) {
-        Ok(_) => {},
-        Err(e) => println!("Error: {}", e.to_string()),
-    }
-    println!("\n Info: \n{}", schema.info());
-    println!("===================================");
-    println!("test Schema whith normal range:");
-    let mut schema = schema::Schema::new("","");
-    let config = Config::open("tests/data/t1.conf").unwrap();
-    schema.set("u16", "Test u16", true, range(0 .. 65000));
-    match schema.check(&config) {
-        Ok(_) => {},
-        Err(e) => println!("Error: {}", e.to_string()),
-    }
-    println!("\n Info: \n{}", schema.info());
-    println!("===================================");
-    println!("test Schema whithout validator:");
-    let mut schema = schema::Schema::new("","");
-    let config = Config::open("tests/data/t1.conf").unwrap();
-    schema.set("u16", "Test u16", true, None);
-    match schema.check(&config) {
-        Ok(_) => {},
-        Err(e) => println!("Error: {}", e.to_string()),
-    }
-    println!("\n Info: \n{}", schema.info());
-    println!("===================================");
-    println!("test RECURSIVE Schema whith normal range:");
-    let mut schema = schema::Schema::new("","");
-    let mut multiplex = schema::Schema::new("multiplex","simple dvb multiplex");
-    let mut service = schema::Schema::new("service","");
-    let config = Config::open("tests/data/t1.conf").unwrap();
-    schema.set("u16", "Test u16", true, range(0 .. 65000));
-    multiplex.set("tsid", "Number of transport", true, range(0 .. 65000));
-    multiplex.set("test_name", "Not required test parametr", false, None);
-    service.set("pnr", "Program name", true, range(0 .. 65000));
-    service.set("xmltv-id", "text name of streem", true, None);
-    multiplex.push(service);
-    schema.push(multiplex);    
-    match schema.check(&config) {
-        Ok(_) => {},
-        Err(e) => println!("Error: {}", e.to_string()),
-    }
-    println!("\n Info: \n{}", schema.info());
-    println!("===================================");
-    println!("=======*********************=======");
-    println!("=======**  special tests  **=======");
-    println!("=======*********************=======");
-    println!("===================================");
-    println!("Option in config, not option in schema");
-    let mut schema = schema::Schema::new("","");
-    let mut multiplex = schema::Schema::new("multiplex","simple dvb multiplex");
-    let service = schema::Schema::new("service","");
-    let config = Config::open("tests/data/t1.conf").unwrap();
-    multiplex.push(service);
-    schema.push(multiplex);    
-    match schema.check(&config) {
-        Ok(_) => {},
-        Err(e) => println!("Error: {}", e.to_string()),
-    }
-    println!("===================================");
-    println!("Option in config, not required, whithout validator");
-    let mut schema = schema::Schema::new("","");
-    let mut multiplex = schema::Schema::new("multiplex","simple dvb multiplex");
-    let mut service = schema::Schema::new("service","");
-    let config = Config::open("tests/data/t1.conf").unwrap();
-    schema.set("u16", "Test u16", false, None);
-    multiplex.set("tsid", "Number of transport", false, None);
-    service.set("pnr", "Program name", false, None);
-    service.set("xmltv-id", "text name of streem", false, None);
-    multiplex.push(service);
-    schema.push(multiplex);    
-    match schema.check(&config) {
-        Ok(_) => {},
-        Err(e) => println!("Error: {}", e.to_string()),
-    }
-    println!("===================================");
-    println!("Option in config, required, whithout validator");
-    let mut schema = schema::Schema::new("","");
-    let mut multiplex = schema::Schema::new("multiplex","simple dvb multiplex");
-    let mut service = schema::Schema::new("service","");
-    let config = Config::open("tests/data/t1.conf").unwrap();
-    schema.set("u16", "Test u16", true, None);
-    multiplex.set("tsid", "Number of transport", true, None);
-    service.set("pnr", "Program name", true, None);
-    service.set("xmltv-id", "text name of streem", true, None);
-    multiplex.push(service);
-    schema.push(multiplex);    
-    match schema.check(&config) {
-        Ok(_) => {},
-        Err(e) => println!("Error: {}", e.to_string()),
-    }
-    println!("===================================");
-    println!("Option in config, required, whith validator");
-    let mut schema = schema::Schema::new("","");
-    let mut multiplex = schema::Schema::new("multiplex","simple dvb multiplex");
-    let mut service = schema::Schema::new("service","");
-    let config = Config::open("tests/data/t1.conf").unwrap();
-    schema.set("u16", "Test u16", true, range(0 .. 65000));
-    multiplex.set("tsid", "Number of transport", true, range(0 .. 65000));
-    service.set("pnr", "Program name", true, range(0 .. 65000));
-    multiplex.push(service);
-    schema.push(multiplex);    
-    match schema.check(&config) {
-        Ok(_) => {},
-        Err(e) => println!("Error: {}", e.to_string()),
-    }
+    schema.set("output", "Output streem", true, None);
+    schema.check(&config).unwrap();
 }
+
+#[test]
+fn test_schema_whithout_parametr() {
+    let mut schema = schema::Schema::new("", "");
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    schema.set("put", "Bad parametr", true, None);
+    assert!(schema.check(&config).is_err());
+}
+
+#[test]
+fn test_schema_unrequred() {
+    let mut schema = schema::Schema::new("", "");
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    schema.set("output", "Output streem", false, None);
+    schema.check(&config).unwrap();
+}
+
+#[test]
+fn test_schema_unrequred_whithout_parametr() {
+    let mut schema = schema::Schema::new("", "");
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    schema.set("put", "Bad parametr", false, None);
+    schema.check(&config).unwrap();
+}
+
+#[test]
+fn test_schema_range() {
+    let mut schema = schema::Schema::new("", "");
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    schema.set("u16", "Test u16", true, range(0 .. 65000));
+    schema.check(&config).unwrap();
+}
+
+#[test]
+fn test_schema_out_range() {
+    let mut schema = schema::Schema::new("", "");
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    schema.set("u16", "Test u16", true, range(0 .. 1));
+    assert!(schema.check(&config).is_err());
+}
+
+#[test]
+fn test_schema_out_range_unrequred() {
+    let mut schema = schema::Schema::new("", "");
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    schema.set("u16", "Test u16", false, range(0 .. 1));
+    assert!(schema.check(&config).is_err());
+}
+
+#[test]
+fn test_schema_nested_ok() {
+    let mut schema = schema::Schema::new("","");
+    let mut multiplex = schema::Schema::new("multiplex","simple dvb multiplex");
+    let mut service = schema::Schema::new("service","");
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    service.set("pnr", "Program name", true, None);
+    multiplex.push(service);
+    schema.push(multiplex);    
+    schema.check(&config).unwrap();
+}
+
+#[test]
+fn test_schema_nested_whithout_parametr() {
+    let mut schema = schema::Schema::new("","");
+    let mut multiplex = schema::Schema::new("multiplex","simple dvb multiplex");
+    let mut service = schema::Schema::new("service","");
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    service.set("pttr", "Unreal", true, None);
+    multiplex.push(service);
+    schema.push(multiplex);    
+    assert!(schema.check(&config).is_err());
+}
+
+#[test]
+fn test_schema_nested_range() {
+    let mut schema = schema::Schema::new("","");
+    let mut multiplex = schema::Schema::new("multiplex","simple dvb multiplex");
+    let mut service = schema::Schema::new("service","");
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    service.set("pnr", "Program name", true, range(0 .. 65000));
+    multiplex.push(service);
+    schema.push(multiplex);   
+    schema.check(&config).unwrap();
+}
+
+#[test]
+fn test_schema_nested_out_range() {
+    let mut schema = schema::Schema::new("","");
+    let mut multiplex = schema::Schema::new("multiplex","simple dvb multiplex");
+    let mut service = schema::Schema::new("service","");
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    service.set("pnr", "Program name", true, range(0 .. 1));
+    multiplex.push(service);
+    schema.push(multiplex);   
+    assert!(schema.check(&config).is_err());
+}
+
+#[test]
+fn test_schema_nested_out_range_unrequred() {
+    let mut schema = schema::Schema::new("","");
+    let mut multiplex = schema::Schema::new("multiplex","simple dvb multiplex");
+    let mut service = schema::Schema::new("service","");
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    service.set("pnr", "Program name", false, range(0 .. 1));
+    multiplex.push(service);
+    schema.push(multiplex);   
+    assert!(schema.check(&config).is_err());
+}
+    
