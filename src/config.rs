@@ -184,7 +184,7 @@ impl Config {
                 for _ in 1 .. level {
                     last = match last.nested.last_mut() {
                         Some(v) => v,
-                        None => return Err(Error::Syntax(line, "wrong section level")),
+                        None => return Err(Error::Syntax(line, "wrong section level".into())),
                     };
                 }
                 last.nested.push(section);
@@ -195,7 +195,7 @@ impl Config {
 
             let skip = match token.find('=') {
                 Some(v) => v,
-                None => return Err(Error::Syntax(line, "missing ‘=’ in property declaration")),
+                None => return Err(Error::Syntax(line, "missing ‘=’ in property declaration".into())),
             };
 
             last.properties.push(Property {

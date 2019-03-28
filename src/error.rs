@@ -1,17 +1,21 @@
 use std::{
-    fmt,
     io,
     result,
-    str,
-    num,
 };
+use std::fmt::{
+    self,
+    Display,
+    Formatter,
+};
+use std::num::ParseIntError;
+use std::str::ParseBoolError;
 
 
 #[derive(Debug)]
 pub enum Error {
-    Syntax(usize, &'static str),
-    ParseBoolError(usize, str::ParseBoolError),
-    ParseIntError(usize, num::ParseIntError),
+    Syntax(usize, String),
+    ParseBoolError(usize, ParseBoolError),
+    ParseIntError(usize, ParseIntError),
     Io(io::Error),
 }
 
@@ -19,10 +23,10 @@ pub enum Error {
 pub type Result<T> = result::Result<T, Error>;
 
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match *self {
-            Error::Syntax(line, e) => write!(f, "Syntax Error at line {}: {}", line, e),
+            Error::Syntax(line, ref e) => write!(f, "Syntax Error at line {}: {}", line, e),
             Error::ParseBoolError(line, ref e) => write!(f, "Format Error at line {}: {}", line, e),
             Error::ParseIntError(line, ref e) => write!(f, "Format Error at line {}: {}", line, e),
             Error::Io(ref e) => io::Error::fmt(e, f),

@@ -96,11 +96,13 @@ impl Schema {
             if let Some(property) = config.get_property(&item.name) {
                 if let Some(validator) = &item.validator.0 {
                     if ! validator(&property.get_value()) {
-                        return Err(Error::Syntax(property.get_line(), "problem whith check parametr"));
+                        return Err(Error::Syntax(property.get_line(),
+                        format!("property '{}' invalid", item.name)));
                     }
                 }
             } else if item.required {
-                return Err(Error::Syntax(config.get_line(), "missing required config parametr"));
+                return Err(Error::Syntax(config.get_line(),
+                    format!("property '{}' not found", item.name)));
             }
         }
         for config in config.iter() {
