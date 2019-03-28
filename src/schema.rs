@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 
-use super::config::Config;
-pub use crate::error::{
+use crate::config::Config;
+use crate::error::{
     Error,
     Result,
 };
+
+
+pub struct Validator(Option<Box<Fn(&str) -> bool>>);
 
 
 struct Param {
@@ -21,9 +24,6 @@ pub struct Schema {
     params: Vec<Param>,
     nested: HashMap<String, Schema>,
 }
-
-
-pub struct Validator(Option<Box<Fn(&str) -> bool>>);
 
 
 impl From<Option<Box<Fn(&str) -> bool>>> for Validator {
@@ -76,15 +76,14 @@ impl Schema {
     
     #[inline]
     pub fn push(&mut self, nested: Schema) {
-        self.nested.insert(nested.name.clone(),nested);
+        self.nested.insert(nested.name.clone(), nested);
     }
         
     pub fn check(&self, config: &Config) ->  Result<()> {
         for param in self.params.iter() {
-            let name = config.get_str(&param.name);
-            if let Some(_value) = name {
+            if let Some(value) = config.get_str(&param.name) {
                 if let Some(v) = &param.validator.0 {
-                    if !v(name.unwrap()) {
+                    if !v(value) {
                         return Err(Error::Syntax(config.get_line(), "problem whith check parametr"));
                     }
                 }
@@ -93,11 +92,8 @@ impl Schema {
             }
         }
         for nested_config in config.iter() {
-            if let Some(nested_schema) = self.nested.get(nested_config.get_name()){
-                match nested_schema.check(nested_config) {
-                    Ok(_) => {},
-                    Err(e) => return Err(e),
-                }
+            if let Some(nested_schema) = self.nested.get(nested_config.get_name()) {
+                nested_schema.check(nested_config)?;
             }
         }
         Ok(())

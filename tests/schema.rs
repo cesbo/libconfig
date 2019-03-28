@@ -94,4 +94,62 @@ fn test_schema() {
     println!("=======**  special tests  **=======");
     println!("=======*********************=======");
     println!("===================================");
+    println!("Option in config, not option in schema");
+    let mut schema = schema::Schema::new("","");
+    let mut multiplex = schema::Schema::new("multiplex","simple dvb multiplex");
+    let service = schema::Schema::new("service","");
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    multiplex.push(service);
+    schema.push(multiplex);    
+    match schema.check(&config) {
+        Ok(_) => {},
+        Err(e) => println!("Error: {}", e.to_string()),
+    }
+    println!("===================================");
+    println!("Option in config, not required, whithout validator");
+    let mut schema = schema::Schema::new("","");
+    let mut multiplex = schema::Schema::new("multiplex","simple dvb multiplex");
+    let mut service = schema::Schema::new("service","");
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    schema.set("u16", "Test u16", false, None);
+    multiplex.set("tsid", "Number of transport", false, None);
+    service.set("pnr", "Program name", false, None);
+    service.set("xmltv-id", "text name of streem", false, None);
+    multiplex.push(service);
+    schema.push(multiplex);    
+    match schema.check(&config) {
+        Ok(_) => {},
+        Err(e) => println!("Error: {}", e.to_string()),
+    }
+    println!("===================================");
+    println!("Option in config, required, whithout validator");
+    let mut schema = schema::Schema::new("","");
+    let mut multiplex = schema::Schema::new("multiplex","simple dvb multiplex");
+    let mut service = schema::Schema::new("service","");
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    schema.set("u16", "Test u16", true, None);
+    multiplex.set("tsid", "Number of transport", true, None);
+    service.set("pnr", "Program name", true, None);
+    service.set("xmltv-id", "text name of streem", true, None);
+    multiplex.push(service);
+    schema.push(multiplex);    
+    match schema.check(&config) {
+        Ok(_) => {},
+        Err(e) => println!("Error: {}", e.to_string()),
+    }
+    println!("===================================");
+    println!("Option in config, required, whith validator");
+    let mut schema = schema::Schema::new("","");
+    let mut multiplex = schema::Schema::new("multiplex","simple dvb multiplex");
+    let mut service = schema::Schema::new("service","");
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    schema.set("u16", "Test u16", true, range(0 .. 65000));
+    multiplex.set("tsid", "Number of transport", true, range(0 .. 65000));
+    service.set("pnr", "Program name", true, range(0 .. 65000));
+    multiplex.push(service);
+    schema.push(multiplex);    
+    match schema.check(&config) {
+        Ok(_) => {},
+        Err(e) => println!("Error: {}", e.to_string()),
+    }
 }
