@@ -133,6 +133,7 @@ impl Schema {
         }
     }
 
+    /// Range validator
     pub fn range(r: Range<usize>) -> impl Fn(&str) -> bool {
         move |s: &str| -> bool {
             let (skip, radix) = if s.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
