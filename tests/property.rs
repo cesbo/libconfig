@@ -1,5 +1,6 @@
 use config::Config;
 
+
 const T1: &str = r#"
 true = true
 false = false
@@ -10,6 +11,21 @@ i32-min = -2200000000
 usize = 1q
 u16 = 0x1234
 "#;
+
+
+const WF: &str = r#"
+ok = true
+wrong-format
+"#;
+
+
+const WL: &str = r#"
+ok = true
+# ok-level
+ok = true
+### wrong-level
+"#;
+
 
 #[test]
 fn test_property() {
@@ -54,4 +70,22 @@ fn test_property() {
         Ok(v) => assert_eq!(v, 0x1234),
         Err(_) => unreachable!(),
     };
+}
+
+
+#[test]
+fn test_wrong_format() {
+    match Config::parse(WF.as_bytes()) {
+        Ok(_) => unreachable!(),
+        Err(e) => println!("{}", e),
+    }
+}
+
+
+#[test]
+fn test_wrong_level() {
+    match Config::parse(WL.as_bytes()) {
+        Ok(_) => unreachable!(),
+        Err(e) => println!("{}", e),
+    }
 }

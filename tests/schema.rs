@@ -58,7 +58,10 @@ fn test_schema_out_range() {
     let mut schema = Schema::new("", "");
     let config = Config::open("tests/data/t1.conf").unwrap();
     schema.set("u16", "Test u16", true, Schema::range(0 .. 1));
-    assert!(schema.check(&config).is_err());
+    match schema.check(&config) {
+        Ok(_) => unreachable!(),
+        Err(e) => println!("{}", e),
+    }
 }
 
 #[test]
@@ -66,7 +69,10 @@ fn test_schema_out_range_unrequred() {
     let mut schema = Schema::new("", "");
     let config = Config::open("tests/data/t1.conf").unwrap();
     schema.set("u16", "Test u16", false, Schema::range(0 .. 1));
-    assert!(schema.check(&config).is_err());
+    match schema.check(&config) {
+        Ok(_) => unreachable!(),
+        Err(e) => println!("{}", e),
+    }
 }
 
 #[test]
@@ -83,14 +89,18 @@ fn test_schema_nested_ok() {
 
 #[test]
 fn test_schema_nested_whithout_parametr() {
-    let mut schema = Schema::new("","");
-    let mut multiplex = Schema::new("multiplex","simple dvb multiplex");
-    let mut service = Schema::new("service","");
-    let config = Config::open("tests/data/t1.conf").unwrap();
+    let mut schema = Schema::new("", "");
+    let mut multiplex = Schema::new("multiplex", "simple dvb multiplex");
+    let mut service = Schema::new("service", "");
     service.set("pttr", "Unreal", true, None);
     multiplex.push(service);
     schema.push(multiplex);
-    assert!(schema.check(&config).is_err());
+
+    let config = Config::open("tests/data/t1.conf").unwrap();
+    match schema.check(&config) {
+        Ok(_) => unreachable!(),
+        Err(e) => println!("{}", e),
+    }
 }
 
 #[test]
@@ -114,7 +124,10 @@ fn test_schema_nested_out_range() {
     service.set("pnr", "Program name", true, Schema::range(0 .. 1));
     multiplex.push(service);
     schema.push(multiplex);
-    assert!(schema.check(&config).is_err());
+    match schema.check(&config) {
+        Ok(_) => unreachable!(),
+        Err(e) => println!("{}", e),
+    }
 }
 
 #[test]
@@ -126,5 +139,8 @@ fn test_schema_nested_out_range_unrequred() {
     service.set("pnr", "Program name", false, Schema::range(0 .. 1));
     multiplex.push(service);
     schema.push(multiplex);
-    assert!(schema.check(&config).is_err());
+    match schema.check(&config) {
+        Ok(_) => unreachable!(),
+        Err(e) => println!("{}", e),
+    }
 }

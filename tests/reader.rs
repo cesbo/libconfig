@@ -22,3 +22,11 @@ fn test_reader() {
         }
     }
 }
+
+#[test]
+fn test_not_found() {
+    match Config::open("tests/data/not-found.conf") {
+        Ok(_) => unreachable!(),
+        Err(e) => println!("{}", e),
+    }
+}

@@ -1,4 +1,5 @@
 use std::io::{
+    self,
     Read,
     BufRead,
     BufReader,
@@ -8,10 +9,24 @@ use std::io::{
 use std::fs::File;
 use std::path::Path;
 
-use crate::error::{
+use failure::{
     Error,
-    Result,
+    Fail,
+    ResultExt,
 };
+
+
+#[derive(Debug, Fail)]
+enum ConfigError {
+    #[fail(display="Config Error: {}", 0)]
+    Io(io::Error),
+    #[fail(display="Config Error: invalid format at line {}", 0)]
+    DelimiterNotFound(usize),
+    #[fail(display="Config Error: section '{}' at line {} has wrong level", 1, 0)]
+    SectionInvalidLevel(usize, String),
+    #[fail(display="Config Error: invalid property '{}' at line {}", 1, 0)]
+    PropertyInvalid(usize, String),
+}
 
 
 pub struct Property {
@@ -129,7 +144,7 @@ impl Config {
 
     /// Returns property typed value (boolean or numbers)
     #[inline]
-    pub fn get<F>(&self, name: &str, opt: F) -> Result<F>
+    pub fn get<F>(&self, name: &str, opt: F) -> Result<F, Error>
     where
         F: FromProperty,
     {
@@ -146,7 +161,7 @@ impl Config {
     }
 
     /// Deserialize config
-    pub fn parse<R: Read>(src: R) -> Result<Config> {
+    pub fn parse<R: Read>(src: R) -> Result<Config, Error> {
         let mut line = 0;
 
         let mut reader = BufReader::new(src);
@@ -157,10 +172,10 @@ impl Config {
 
         loop {
             buffer.clear();
-            match reader.read_line(&mut buffer) {
-                Ok(v) => if v == 0 { break },
-                Err(e) => return Err(Error::from(e)),
-            };
+            if reader.read_line(&mut buffer).map_err(|e| ConfigError::Io(e))? == 0 {
+                break
+            }
+
             line += 1;
 
             let token = buffer.trim_start();
@@ -182,10 +197,8 @@ impl Config {
 
                 last = &mut root;
                 for _ in 1 .. level {
-                    last = match last.nested.last_mut() {
-                        Some(v) => v,
-                        None => return Err(Error::Syntax(line, "wrong section level".to_owned())),
-                    };
+                    last = last.nested.last_mut().ok_or_else(||
+                        ConfigError::SectionInvalidLevel(line, token.to_owned()))?;
                 }
                 last.nested.push(section);
                 last = last.nested.last_mut().unwrap();
@@ -193,10 +206,8 @@ impl Config {
                 continue;
             }
 
-            let skip = match token.find('=') {
-                Some(v) => v,
-                None => return Err(Error::Syntax(line, "missing ‘=’ in property declaration".to_owned())),
-            };
+            let skip = token.find('=').ok_or_else(||
+                ConfigError::DelimiterNotFound(line))?;
 
             last.properties.push(Property {
                 line,
@@ -210,11 +221,12 @@ impl Config {
 
     /// Opens config file
     #[inline]
-    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
-        Self::parse(File::open(path)?)
+    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        let file = File::open(path).map_err(|e| ConfigError::Io(e))?;
+        Self::parse(file)
     }
 
-    fn dump_section<W: Write>(&self, dst: &mut W, level: usize) -> Result<()> {
+    fn dump_section<W: Write>(&self, dst: &mut W, level: usize) -> io::Result<()> {
         if level > 0 {
             writeln!(dst, "\n{0:#>1$} {2}", "", level, &self.name)?;
         }
@@ -229,32 +241,33 @@ impl Config {
 
     /// Serializes config
     #[inline]
-    pub fn dump<W: Write>(&self, dst: W) -> Result<()> {
-        let mut writer = BufWriter::new(dst);
-        self.dump_section(&mut writer, 0)
+    pub fn dump<W: Write>(&self, dst: &mut W) -> Result<(), Error> {
+        self.dump_section(dst, 0).map_err(|e| ConfigError::Io(e))?;
+        Ok(())
     }
 
     /// Saves config into file
     #[inline]
-    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-        self.dump(File::create(path)?)
+    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
+        let file = File::create(path).map_err(|e| ConfigError::Io(e))?;
+        let mut writer = BufWriter::new(file);
+        self.dump(&mut writer)
     }
 }
 
 
 /// A trait to abstract creating a new instance of a type from a Property
 pub trait FromProperty: Sized {
-    fn from_property(p: &Property) -> Result<Self>;
+    fn from_property(p: &Property) -> Result<Self, Error>;
 }
 
 
 impl FromProperty for bool {
     #[inline]
-    fn from_property(p: &Property) -> Result<bool> {
-        match p.value.parse() {
-            Ok(v) => Ok(v),
-            Err(e) => Err(Error::ParseBoolError(p.line, e)),
-        }
+    fn from_property(p: &Property) -> Result<bool, Error> {
+        let value = p.value.parse::<bool>()
+            .with_context(|_| ConfigError::PropertyInvalid(p.line, p.name.to_owned()))?;
+        Ok(value)
     }
 }
 
@@ -263,12 +276,11 @@ macro_rules! impl_get_number {
     ( $( $t:tt ),* ) => {
         $( impl FromProperty for $t {
             #[inline]
-            fn from_property(p: &Property) -> Result<$t> {
+            fn from_property(p: &Property) -> Result<$t, Error> {
                 let (skip, radix) = if p.value.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
-                match $t::from_str_radix(&p.value[skip ..], radix) {
-                    Ok(v) => Ok(v),
-                    Err(e) => Err(Error::ParseIntError(p.line, e)),
-                }
+                let value = $t::from_str_radix(&p.value[skip ..], radix)
+                    .with_context(|_| ConfigError::PropertyInvalid(p.line, p.name.to_owned()))?;
+                Ok(value)
             }
         } )*
     };
