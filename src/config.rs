@@ -17,8 +17,32 @@ use failure::{
 
 
 #[derive(Debug, Fail)]
-#[fail(display = "Config IO Error: {}", 0)]
-struct IoError(io::Error);
+#[fail(display = "Config Error: {}", 0)]
+pub (crate) struct ConfigError(Error);
+
+
+impl From<Error> for ConfigError {
+    #[inline]
+    fn from(e: Error) -> ConfigError {
+        ConfigError(e)
+    }
+}
+
+
+impl From<io::Error> for ConfigError {
+    #[inline]
+    fn from(e: io::Error) -> ConfigError {
+        ConfigError(e.into())
+    }
+}
+
+
+impl From<&str> for ConfigError {
+    #[inline]
+    fn from(e: &str) -> ConfigError {
+        ConfigError(format_err!("{}", e))
+    }
+}
 
 
 pub struct Property {
@@ -164,7 +188,7 @@ impl Config {
 
         loop {
             buffer.clear();
-            if reader.read_line(&mut buffer).map_err(|e| IoError(e))? == 0 {
+            if reader.read_line(&mut buffer).map_err(ConfigError::from)? == 0 {
                 break
             }
 
@@ -190,7 +214,7 @@ impl Config {
                 last = &mut root;
                 for _ in 1 .. level {
                     last = last.nested.last_mut().ok_or_else(||
-                        format_err!("Config Error: invalid level for '{}' at line {}", token, line))?;
+                        ConfigError::from(format_err!("invalid level for '{}' at line {}", token, line)))?;
                 }
                 last.nested.push(section);
                 last = last.nested.last_mut().unwrap();
@@ -199,7 +223,7 @@ impl Config {
             }
 
             let skip = token.find('=').ok_or_else(||
-                format_err!("Config Error: invalid format at line {}", line))?;
+                ConfigError::from(format_err!("invalid format at line {}", line)))?;
 
             last.properties.push(Property {
                 line,
@@ -214,7 +238,7 @@ impl Config {
     /// Opens config file
     #[inline]
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
-        let file = File::open(path).map_err(|e| IoError(e))?;
+        let file = File::open(path).map_err(ConfigError::from)?;
         Self::parse(file)
     }
 
@@ -234,14 +258,14 @@ impl Config {
     /// Serializes config
     #[inline]
     pub fn dump<W: Write>(&self, dst: &mut W) -> Result<(), Error> {
-        self.dump_section(dst, 0).map_err(|e| IoError(e))?;
+        self.dump_section(dst, 0).map_err(ConfigError::from)?;
         Ok(())
     }
 
     /// Saves config into file
     #[inline]
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
-        let file = File::create(path).map_err(|e| IoError(e))?;
+        let file = File::create(path).map_err(ConfigError::from)?;
         let mut writer = BufWriter::new(file);
         self.dump(&mut writer)
     }
@@ -262,8 +286,8 @@ struct FromPropertyError(usize, String);
 impl FromProperty for bool {
     #[inline]
     fn from_property(p: &Property) -> Result<bool, Error> {
-        let value = p.value.parse::<bool>()
-            .map_err(|_| FromPropertyError(p.line, p.name.to_owned()))?;
+        let value = p.value.parse::<bool>().map_err(|_|
+            FromPropertyError(p.line, p.name.to_owned()))?;
         Ok(value)
     }
 }
@@ -275,8 +299,8 @@ macro_rules! impl_get_number {
             #[inline]
             fn from_property(p: &Property) -> Result<$t, Error> {
                 let (skip, radix) = if p.value.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
-                let value = $t::from_str_radix(&p.value[skip ..], radix)
-                    .map_err(|_| FromPropertyError(p.line, p.name.to_owned()))?;
+                let value = $t::from_str_radix(&p.value[skip ..], radix).map_err(|_|
+                    FromPropertyError(p.line, p.name.to_owned()))?;
                 Ok(value)
             }
         } )*

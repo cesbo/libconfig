@@ -3,10 +3,14 @@ use std::ops::Range;
 
 use failure::{
     ensure,
+    format_err,
     Error,
 };
 
-use crate::config::Config;
+use crate::config::{
+    Config,
+    ConfigError,
+};
 
 
 pub struct Validator(Option<Box<Fn(&str) -> bool>>);
@@ -96,14 +100,12 @@ impl Schema {
         for item in &self.properties {
             if let Some(property) = config.get_property(&item.name) {
                 if let Some(validator) = &item.validator.0 {
-                    ensure!(validator(&property.get_value()),
-                        "Config Error: invalid property '{}' at line {}",
-                        item.name, property.get_line());
+                    ensure!(validator(&property.get_value()), ConfigError::from(format_err!(
+                        "invalid property '{}' at line {}", item.name, property.get_line())));
                 }
             } else {
-                ensure!(!item.required,
-                    "Config Error: missing required property '{}' at line {}",
-                    item.name, config.get_line());
+                ensure!(!item.required, ConfigError::from(format_err!(
+                    "missing required property '{}' at line {}", item.name, config.get_line())));
             }
         }
         for config in config.iter() {
