@@ -2,21 +2,15 @@ use std::collections::HashMap;
 use std::ops::Range;
 
 use failure::{
-    ensure,
+    format_err,
     Error,
-    Fail,
+    ResultExt,
 };
 
-use crate::config::Config;
-
-
-#[derive(Debug, Fail)]
-enum SchemaError {
-    #[fail(display="Config Error: invalid property '{}' at line {}", 1, 0)]
-    PropertyInvalid(usize, String),
-    #[fail(display="Config Error: missing required property '{}' at line {}", 1, 0)]
-    PropertyNotFound(usize, String),
-}
+use crate::config::{
+    Config,
+    ConfigError,
+};
 
 
 pub struct Validator(Option<Box<Fn(&str) -> bool>>);
@@ -106,12 +100,18 @@ impl Schema {
         for item in &self.properties {
             if let Some(property) = config.get_property(&item.name) {
                 if let Some(validator) = &item.validator.0 {
-                    ensure!(validator(&property.get_value()),
-                        SchemaError::PropertyInvalid(property.get_line(), item.name.to_owned()));
+                    if ! validator(&property.get_value()) {
+                        Err(format_err!("invalid property '{}' at line {}",
+                            item.name, property.get_line()))
+                        .context(ConfigError)?;
+                    }
                 }
             } else {
-                ensure!(!item.required,
-                    SchemaError::PropertyNotFound(config.get_line(), item.name.to_owned()));
+                if item.required {
+                    Err(format_err!("missing required property '{}' at line {}",
+                        item.name, config.get_line()))
+                    .context(ConfigError)?;
+                }
             }
         }
         for config in config.iter() {

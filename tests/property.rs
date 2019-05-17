@@ -43,7 +43,7 @@ fn test_property() {
 
     match config.get::<bool>("bool", false) {
         Ok(_) => unreachable!(),
-        Err(e) => println!("{}", e),
+        Err(e) => e.iter_chain().for_each(|e| println!("> {}", e)),
     };
 
     match config.get::<u8>("u8", 0) {
@@ -53,17 +53,17 @@ fn test_property() {
 
     match config.get::<u8>("u8-max", 0) {
         Ok(_) => unreachable!(),
-        Err(e) => println!("{}", e),
+        Err(e) => e.iter_chain().for_each(|e| println!("> {}", e)),
     };
 
     match config.get::<i32>("i32-min", 0) {
         Ok(_) => unreachable!(),
-        Err(e) => println!("{}", e),
+        Err(e) => e.iter_chain().for_each(|e| println!("> {}", e)),
     };
 
     match config.get::<usize>("usize", 0) {
         Ok(_) => unreachable!(),
-        Err(e) => println!("{}", e),
+        Err(e) => e.iter_chain().for_each(|e| println!("> {}", e)),
     };
 
     match config.get::<u16>("u16", 0) {
@@ -77,7 +77,7 @@ fn test_property() {
 fn test_wrong_format() {
     match Config::parse(WF.as_bytes()) {
         Ok(_) => unreachable!(),
-        Err(e) => println!("{}", e),
+        Err(e) => e.iter_chain().for_each(|e| println!("> {}", e)),
     }
 }
 
@@ -86,6 +86,6 @@ fn test_wrong_format() {
 fn test_wrong_level() {
     match Config::parse(WL.as_bytes()) {
         Ok(_) => unreachable!(),
-        Err(e) => println!("{}", e),
+        Err(e) => e.iter_chain().for_each(|e| println!("> {}", e)),
     }
 }

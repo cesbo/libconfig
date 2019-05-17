@@ -60,7 +60,7 @@ fn test_schema_out_range() {
     schema.set("u16", "Test u16", true, Schema::range(0 .. 1));
     match schema.check(&config) {
         Ok(_) => unreachable!(),
-        Err(e) => println!("{}", e),
+        Err(e) => e.iter_chain().for_each(|e| println!("> {}", e)),
     }
 }
 
@@ -71,7 +71,7 @@ fn test_schema_out_range_unrequred() {
     schema.set("u16", "Test u16", false, Schema::range(0 .. 1));
     match schema.check(&config) {
         Ok(_) => unreachable!(),
-        Err(e) => println!("{}", e),
+        Err(e) => e.iter_chain().for_each(|e| println!("> {}", e)),
     }
 }
 
@@ -99,7 +99,7 @@ fn test_schema_nested_whithout_parametr() {
     let config = Config::open("tests/data/t1.conf").unwrap();
     match schema.check(&config) {
         Ok(_) => unreachable!(),
-        Err(e) => println!("{}", e),
+        Err(e) => e.iter_chain().for_each(|e| println!("> {}", e)),
     }
 }
 
@@ -126,7 +126,7 @@ fn test_schema_nested_out_range() {
     schema.push(multiplex);
     match schema.check(&config) {
         Ok(_) => unreachable!(),
-        Err(e) => println!("{}", e),
+        Err(e) => e.iter_chain().for_each(|e| println!("> {}", e)),
     }
 }
 
@@ -141,6 +141,6 @@ fn test_schema_nested_out_range_unrequred() {
     schema.push(multiplex);
     match schema.check(&config) {
         Ok(_) => unreachable!(),
-        Err(e) => println!("{}", e),
+        Err(e) => e.iter_chain().for_each(|e| println!("> {}", e)),
     }
 }
