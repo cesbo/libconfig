@@ -3,7 +3,6 @@ use std::ops::Range;
 
 use failure::{
     ensure,
-    format_err,
     Error,
 };
 
@@ -100,11 +99,11 @@ impl Schema {
         for item in &self.properties {
             if let Some(property) = config.get_property(&item.name) {
                 if let Some(validator) = &item.validator.0 {
-                    ensure!(validator(&property.get_value()), ConfigError::from(format_err!(
+                    ensure!(validator(&property.get_value()), ConfigError::from(format!(
                         "invalid property '{}' at line {}", item.name, property.get_line())));
                 }
             } else {
-                ensure!(!item.required, ConfigError::from(format_err!(
+                ensure!(!item.required, ConfigError::from(format!(
                     "missing required property '{}' at line {}", item.name, config.get_line())));
             }
         }

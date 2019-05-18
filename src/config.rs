@@ -10,38 +10,25 @@ use std::fs::File;
 use std::path::Path;
 
 use failure::{
-    format_err,
     Error,
     Fail,
 };
 
 
 #[derive(Debug, Fail)]
-#[fail(display = "Config Error: {}", 0)]
+#[fail(display = "Config: {}", 0)]
 pub (crate) struct ConfigError(Error);
-
-
-impl From<Error> for ConfigError {
-    #[inline]
-    fn from(e: Error) -> ConfigError {
-        ConfigError(e)
-    }
-}
 
 
 impl From<io::Error> for ConfigError {
     #[inline]
-    fn from(e: io::Error) -> ConfigError {
-        ConfigError(e.into())
-    }
+    fn from(e: io::Error) -> ConfigError { ConfigError(e.into()) }
 }
 
 
-impl From<&str> for ConfigError {
+impl From<String> for ConfigError {
     #[inline]
-    fn from(e: &str) -> ConfigError {
-        ConfigError(format_err!("{}", e))
-    }
+    fn from(e: String) -> ConfigError { ConfigError(failure::err_msg(e)) }
 }
 
 
@@ -214,7 +201,7 @@ impl Config {
                 last = &mut root;
                 for _ in 1 .. level {
                     last = last.nested.last_mut().ok_or_else(||
-                        ConfigError::from(format_err!("invalid level for '{}' at line {}", token, line)))?;
+                        ConfigError::from(format!("invalid level for '{}' at line {}", token, line)))?;
                 }
                 last.nested.push(section);
                 last = last.nested.last_mut().unwrap();
@@ -223,7 +210,7 @@ impl Config {
             }
 
             let skip = token.find('=').ok_or_else(||
-                ConfigError::from(format_err!("invalid format at line {}", line)))?;
+                ConfigError::from(format!("invalid format at line {}", line)))?;
 
             last.properties.push(Property {
                 line,
