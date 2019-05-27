@@ -1,14 +1,11 @@
 use std::collections::HashMap;
 use std::ops::Range;
 
-use failure::{
-    ensure,
-    Error,
-};
-
 use crate::config::{
     Config,
-    ConfigError,
+    Result,
+    InvalidProperty,
+    MissingProperty,
 };
 
 
@@ -95,23 +92,25 @@ impl Schema {
     }
 
     /// Validates config with schema
-    pub fn check(&self, config: &Config) ->  Result<(), Error> {
+    pub fn check(&self, config: &Config) ->  Result<()> {
         for item in &self.properties {
             if let Some(property) = config.get_property(&item.name) {
                 if let Some(validator) = &item.validator.0 {
-                    ensure!(validator(&property.get_value()), ConfigError::from(format!(
-                        "invalid property '{}' at line {}", item.name, property.get_line())));
+                    if ! validator(&property.get_value()) {
+                        bail!(InvalidProperty(property.get_line(), item.name.to_owned()));
+                    }
                 }
-            } else {
-                ensure!(!item.required, ConfigError::from(format!(
-                    "missing required property '{}' at line {}", item.name, config.get_line())));
+            } else if item.required {
+                bail!(MissingProperty(config.get_line(), item.name.to_owned()));
             }
         }
+
         for config in config.iter() {
             if let Some(schema) = self.nested.get(config.get_name()) {
                 schema.check(config)?;
             }
         }
+
         Ok(())
     }
 

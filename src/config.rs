@@ -9,26 +9,13 @@ use std::io::{
 use std::fs::File;
 use std::path::Path;
 
-use failure::{
-    Error,
-    Fail,
-};
 
-
-#[derive(Debug, Fail)]
-#[fail(display = "Config: {}", 0)]
-pub (crate) struct ConfigError(Error);
-
-
-impl From<io::Error> for ConfigError {
-    #[inline]
-    fn from(e: io::Error) -> ConfigError { ConfigError(e.into()) }
-}
-
-
-impl From<String> for ConfigError {
-    #[inline]
-    fn from(e: String) -> ConfigError { ConfigError(failure::err_msg(e)) }
+error_rules! {
+    Error => ("Config: {}", error),
+    io::Error,
+    InvalidProperty(usize, String) => ("invalid property '{}' at line {}", 1, 0),
+    InvalidFormat(usize) => ("invalid format at line {}", 0),
+    MissingProperty(usize, String) => ("missing required property '{}' at line {}", 1, 0),
 }
 
 
@@ -41,14 +28,10 @@ pub struct Property {
 
 impl Property {
     #[inline]
-    pub fn get_line(&self) -> usize {
-        self.line
-    }
+    pub fn get_line(&self) -> usize { self.line }
 
     #[inline]
-    pub fn get_value(&self) -> &str {
-        self.value.as_str()
-    }
+    pub fn get_value(&self) -> &str { self.value.as_str() }
 }
 
 
@@ -109,21 +92,15 @@ impl Config {
 
     /// Appends nested config
     #[inline]
-    pub fn push(&mut self, nested: Config) {
-        self.nested.push(nested);
-    }
+    pub fn push(&mut self, nested: Config) { self.nested.push(nested) }
 
     /// Returns section name
     #[inline]
-    pub fn get_name(&self) -> &str {
-        self.name.as_str()
-    }
+    pub fn get_name(&self) -> &str { self.name.as_str() }
 
     /// Returns section line number
     #[inline]
-    pub fn get_line(&self) -> usize {
-        self.line
-    }
+    pub fn get_line(&self) -> usize { self.line }
 
     /// Returns property
     #[inline]
@@ -139,32 +116,29 @@ impl Config {
     /// Returns property string value
     #[inline]
     pub fn get_str<'a>(&'a self, name: &str) -> Option<&'a str> {
-        match self.get_property(name) {
-            Some(v) => Some(v.value.as_str()),
-            None => None,
-        }
+        self.get_property(name).map(|v| v.value.as_str())
     }
 
     /// Returns property typed value (boolean or numbers)
     #[inline]
-    pub fn get<F>(&self, name: &str, opt: F) -> Result<F, Error>
+    pub fn get<F>(&self, name: &str, opt: F) -> Result<F>
     where
         F: FromProperty,
     {
-        match self.get_property(name) {
-            Some(v) => FromProperty::from_property(v),
-            None => Ok(opt),
-        }
+        let value = match self.get_property(name) {
+            Some(v) => FromProperty::from_property(v)?,
+            None => opt,
+        };
+
+        Ok(value)
     }
 
     /// Returns nested sections iterator
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = &Config> {
-        self.nested.iter()
-    }
+    pub fn iter(&self) -> impl Iterator<Item = &Config> { self.nested.iter() }
 
     /// Deserialize config
-    pub fn parse<R: Read>(src: R) -> Result<Config, Error> {
+    pub fn parse<R: Read>(src: R) -> Result<Config> {
         let mut line = 0;
 
         let mut reader = BufReader::new(src);
@@ -175,7 +149,7 @@ impl Config {
 
         loop {
             buffer.clear();
-            if reader.read_line(&mut buffer).map_err(ConfigError::from)? == 0 {
+            if reader.read_line(&mut buffer)? == 0 {
                 break
             }
 
@@ -200,8 +174,8 @@ impl Config {
 
                 last = &mut root;
                 for _ in 1 .. level {
-                    last = last.nested.last_mut().ok_or_else(||
-                        ConfigError::from(format!("invalid level for '{}' at line {}", token, line)))?;
+                    last = last.nested.last_mut()
+                        .ok_or_else(|| InvalidProperty(line, token.to_owned()))?;
                 }
                 last.nested.push(section);
                 last = last.nested.last_mut().unwrap();
@@ -209,8 +183,7 @@ impl Config {
                 continue;
             }
 
-            let skip = token.find('=').ok_or_else(||
-                ConfigError::from(format!("invalid format at line {}", line)))?;
+            let skip = token.find('=').ok_or_else(|| InvalidFormat(line))?;
 
             last.properties.push(Property {
                 line,
@@ -224,8 +197,8 @@ impl Config {
 
     /// Opens config file
     #[inline]
-    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
-        let file = File::open(path).map_err(ConfigError::from)?;
+    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let file = File::open(path)?;
         Self::parse(file)
     }
 
@@ -244,15 +217,15 @@ impl Config {
 
     /// Serializes config
     #[inline]
-    pub fn dump<W: Write>(&self, dst: &mut W) -> Result<(), Error> {
-        self.dump_section(dst, 0).map_err(ConfigError::from)?;
+    pub fn dump<W: Write>(&self, dst: &mut W) -> Result<()> {
+        self.dump_section(dst, 0)?;
         Ok(())
     }
 
     /// Saves config into file
     #[inline]
-    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
-        let file = File::create(path).map_err(ConfigError::from)?;
+    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        let file = File::create(path)?;
         let mut writer = BufWriter::new(file);
         self.dump(&mut writer)
     }
@@ -261,20 +234,15 @@ impl Config {
 
 /// A trait to abstract creating a new instance of a type from a Property
 pub trait FromProperty: Sized {
-    fn from_property(p: &Property) -> Result<Self, Error>;
+    fn from_property(p: &Property) -> Result<Self>;
 }
-
-
-#[derive(Debug, Fail)]
-#[fail(display = "Config Error: invalid property '{}' at line {}", 1, 0)]
-struct FromPropertyError(usize, String);
 
 
 impl FromProperty for bool {
     #[inline]
-    fn from_property(p: &Property) -> Result<bool, Error> {
-        let value = p.value.parse::<bool>().map_err(|_|
-            FromPropertyError(p.line, p.name.to_owned()))?;
+    fn from_property(p: &Property) -> Result<bool> {
+        let value = p.value.parse::<bool>()
+            .map_err(|_| InvalidProperty(p.line, p.name.to_owned()))?;
         Ok(value)
     }
 }
@@ -284,10 +252,10 @@ macro_rules! impl_get_number {
     ( $( $t:tt ),* ) => {
         $( impl FromProperty for $t {
             #[inline]
-            fn from_property(p: &Property) -> Result<$t, Error> {
+            fn from_property(p: &Property) -> Result<$t> {
                 let (skip, radix) = if p.value.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
-                let value = $t::from_str_radix(&p.value[skip ..], radix).map_err(|_|
-                    FromPropertyError(p.line, p.name.to_owned()))?;
+                let value = $t::from_str_radix(&p.value[skip ..], radix)
+                    .map_err(|_| InvalidProperty(p.line, p.name.to_owned()))?;
                 Ok(value)
             }
         } )*
