@@ -1,13 +1,15 @@
-use std::io::{
-    self,
-    Read,
-    BufRead,
-    BufReader,
-    Write,
-    BufWriter,
+use std::{
+    fs::File,
+    path::Path,
+    io::{
+        self,
+        Read,
+        BufRead,
+        BufReader,
+        Write,
+        BufWriter,
+    },
 };
-use std::fs::File;
-use std::path::Path;
 
 
 error_rules! {
