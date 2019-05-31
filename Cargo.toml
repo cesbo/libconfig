@@ -2,7 +2,9 @@
 name = "config"
 version = "0.1.0"
 authors = ["Cesbo Developers Team"]
+description = "ini-like config parser"
 edition = "2018"
+publish = false
 
 [dependencies]
 error-rules = "0.2"
