@@ -12,13 +12,20 @@ use std::{
 };
 
 
-error_rules! {
-    Error => ("Config: {}", error),
-    io::Error,
-    InvalidProperty(usize, String) => ("invalid property '{}' at line {}", 1, 0),
-    InvalidFormat(usize) => ("invalid format at line {}", 0),
-    MissingProperty(usize, String) => ("missing required property '{}' at line {}", 1, 0),
+#[derive(Debug, Error)]
+pub enum ConfigError {
+    #[error_from("Config IO: {}", 0)]
+    Io(io::Error),
+    #[error_kind("Config: invalid property '{}' at line {}", 1, 0)]
+    InvalidProperty(usize, String),
+    #[error_kind("Config: invalid format at line {}", 0)]
+    InvalidFormat(usize),
+    #[error_kind("Config: missing required property '{}' at line {}", 1, 0)]
+    MissingProperty(usize, String),
 }
+
+
+pub type Result<T> = std::result::Result<T, ConfigError>;
 
 
 pub struct Property {
@@ -177,7 +184,7 @@ impl Config {
                 last = &mut root;
                 for _ in 1 .. level {
                     last = last.nested.last_mut()
-                        .ok_or_else(|| InvalidProperty(line, token.to_owned()))?;
+                        .ok_or_else(|| ConfigError::InvalidProperty(line, token.to_owned()))?;
                 }
                 last.nested.push(section);
                 last = last.nested.last_mut().unwrap();
@@ -185,7 +192,8 @@ impl Config {
                 continue;
             }
 
-            let skip = token.find('=').ok_or_else(|| InvalidFormat(line))?;
+            let skip = token.find('=')
+                .ok_or_else(|| ConfigError::InvalidFormat(line))?;
 
             last.properties.push(Property {
                 line,
@@ -244,7 +252,7 @@ impl FromProperty for bool {
     #[inline]
     fn from_property(p: &Property) -> Result<bool> {
         let value = p.value.parse::<bool>()
-            .map_err(|_| InvalidProperty(p.line, p.name.to_owned()))?;
+            .map_err(|_| ConfigError::InvalidProperty(p.line, p.name.to_owned()))?;
         Ok(value)
     }
 }
@@ -257,7 +265,7 @@ macro_rules! impl_get_number {
             fn from_property(p: &Property) -> Result<$t> {
                 let (skip, radix) = if p.value.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
                 let value = $t::from_str_radix(&p.value[skip ..], radix)
-                    .map_err(|_| InvalidProperty(p.line, p.name.to_owned()))?;
+                    .map_err(|_| ConfigError::InvalidProperty(p.line, p.name.to_owned()))?;
                 Ok(value)
             }
         } )*

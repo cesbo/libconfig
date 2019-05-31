@@ -5,9 +5,8 @@ use std::{
 
 use crate::config::{
     Config,
+    ConfigError,
     Result,
-    InvalidProperty,
-    MissingProperty,
 };
 
 
@@ -99,11 +98,11 @@ impl Schema {
             if let Some(property) = config.get_property(&item.name) {
                 if let Some(validator) = &item.validator.0 {
                     if ! validator(&property.get_value()) {
-                        bail!(InvalidProperty(property.get_line(), item.name.to_owned()));
+                        return Err(ConfigError::InvalidProperty(property.get_line(), item.name.to_owned()));
                     }
                 }
             } else if item.required {
-                bail!(MissingProperty(config.get_line(), item.name.to_owned()));
+                return Err(ConfigError::MissingProperty(config.get_line(), item.name.to_owned()));
             }
         }
 

@@ -4,7 +4,7 @@ extern crate error_rules;
 mod config;
 pub use crate::config::{
     Config,
-    Error as ConfigError,
+    ConfigError,
 };
 
 mod schema;
