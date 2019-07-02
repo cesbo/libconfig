@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    ops::Range,
-};
+use std::ops::Range;
 
 use crate::config::{
     Config,
@@ -26,7 +23,7 @@ pub struct Schema {
     name: String,
     description: String,
     properties: Vec<Property>,
-    nested: HashMap<String, Schema>,
+    nested: Vec<Schema>,
 }
 
 
@@ -62,7 +59,7 @@ impl Schema {
             name: name.into(),
             description: description.into(),
             properties: Vec::new(),
-            nested: HashMap::new(),
+            nested: Vec::new(),
         }
     }
 
@@ -88,8 +85,15 @@ impl Schema {
 
     /// Appends nested schema
     #[inline]
-    pub fn push(&mut self, nested: Schema) {
-        self.nested.insert(nested.name.clone(), nested);
+    pub fn push(&mut self, nested: Schema) { self.nested.push(nested) }
+
+    fn get_nested(&self, name: &str) -> Option<&Schema> {
+        for schema in &self.nested {
+            if schema.name == name {
+                return Some(schema)
+            }
+        }
+        None
     }
 
     /// Validates config with schema
@@ -107,7 +111,7 @@ impl Schema {
         }
 
         for config in config.iter() {
-            if let Some(schema) = self.nested.get(config.get_name()) {
+            if let Some(schema) = self.get_nested(config.get_name()) {
                 schema.check(config)?;
             }
         }
@@ -132,7 +136,7 @@ impl Schema {
         for item in &self.properties {
             result.push_str(&format!("{} - {}\n", &item.name, &item.description));
         }
-        for schema in self.nested.values() {
+        for schema in &self.nested {
             schema.info_section(result, level + 1);
         }
     }
