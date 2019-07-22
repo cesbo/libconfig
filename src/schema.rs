@@ -1,4 +1,10 @@
-use std::ops::Range;
+use std::{
+    fmt::{
+        self,
+        Write,
+    },
+    ops::Range,
+};
 
 use crate::config::{
     Config,
@@ -119,26 +125,40 @@ impl Schema {
         Ok(())
     }
 
-    /// Returns information about schema parameters and nested schemas
-    pub fn info(&mut self) -> String {
-        let mut result = String::new();
-        self.info_section(&mut result, 0);
-        result
+    fn info_section(&self, result: &mut String, level: &mut String) -> fmt::Result {
+        if ! self.description.is_empty() {
+            writeln!(result, "; {}", self.description)?;
+        }
+
+        for item in &self.properties {
+            writeln!(result, "{} = {}", &item.name, &item.description)?;
+        }
+
+        if ! self.nested.is_empty() {
+            let level_skip = level.len();
+
+            if ! self.name.is_empty() {
+                level.push_str(&self.name);
+                level.push('/');
+            }
+
+            for s in &self.nested {
+                writeln!(result, "\n[{}{}]", level, &s.name)?;
+                s.info_section(result, level)?;
+            }
+
+            level.truncate(level_skip);
+        }
+
+        Ok(())
     }
 
-    fn info_section(&self, result: &mut String, level: usize) {
-        if level > 0 {
-            result.push_str(&format!("\n{0:#>1$} {2}\n", "", level, self.name));
-        }
-        if ! self.description.is_empty() {
-            result.push_str(&format!("; {}\n", self.description));
-        }
-        for item in &self.properties {
-            result.push_str(&format!("{} - {}\n", &item.name, &item.description));
-        }
-        for schema in &self.nested {
-            schema.info_section(result, level + 1);
-        }
+    /// Returns information about schema parameters and nested schemas
+    pub fn info(&mut self) -> String {
+        let mut level = String::with_capacity(256);
+        let mut result = String::new();
+        self.info_section(&mut result, &mut level).unwrap();
+        result
     }
 
     /// Range validator

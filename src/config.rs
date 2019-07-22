@@ -16,6 +16,8 @@ use std::{
 pub enum ConfigError {
     #[error_from("Config IO: {}", 0)]
     Io(io::Error),
+    #[error_kind("Config: invalid key '{}' at line {}", 1, 0)]
+    InvalidKey(usize, String),
     #[error_kind("Config: invalid property '{}' at line {}", 1, 0)]
     InvalidProperty(usize, String),
     #[error_kind("Config: invalid format at line {}", 0)]
@@ -46,19 +48,20 @@ impl Property {
 
 /// Ini-inspired configuration format
 ///
-/// # Properties
+/// ## Properties
 ///
 /// Basic element, contains Key-Value pair devide with `=`. Example: `name = Value`
 /// White-spaces around line and around delimiter ignores.
 /// Each value is a string, without quotes.
 ///
-/// # Sections
+/// ## Sections
 ///
-/// Section is a group of properties. The section name should be started with `#`. Example: `# section`
-/// All keys after the section declaration are associated with that section. Sections could be nested.
-/// The nested section name should containg one more `#` in the name. Example: `## nested`
+/// Section is a group of properties. The section name should be wraped into `[]` symbols.
+/// Example: `[section]`. All keys after the section declaration are associated with that section.
+/// Sections could be nested. The nested section name should starts with parent section name and
+/// separated by `/` symbol. Example: [section/nested]`
 ///
-/// # Comments
+/// ## Comments
 ///
 /// Comment line should be started with `;`. Example: `; comment`
 ///
@@ -169,23 +172,37 @@ impl Config {
                 continue;
             }
 
-            if token.starts_with('#') {
+            if token.starts_with('[') {
                 /* Config */
-                let level = token.find(|c: char| c != '#').unwrap_or(0);
-                let token = (&token[level ..]).trim(); /* skip [ */
+
+                let token = (&token[1 ..]).trim_start(); /* skip [ */
+                let end = token.find(']').ok_or_else(|| ConfigError::InvalidFormat(line))?;
+                let token = (&token[.. end]).trim_end(); /* ignore ] */
+
+                let mut skip = 0;
+                last = &mut root;
+
+                loop {
+                    let next = token[skip ..].find('/').map_or(0, |v| v + skip);
+                    if next == 0 { break }
+                    let item = &token[skip .. next];
+                    skip = next + 1;
+
+                    last = last.nested.last_mut()
+                        .ok_or_else(|| ConfigError::InvalidKey(line, token.to_owned()))?;
+
+                    if last.name != item {
+                        return Err(ConfigError::InvalidKey(line, token.to_owned()));
+                    }
+                }
 
                 let section = Config {
                     line,
-                    name: token.to_owned(),
+                    name: token[skip ..].to_owned(),
                     properties: Vec::new(),
                     nested: Vec::new(),
                 };
 
-                last = &mut root;
-                for _ in 1 .. level {
-                    last = last.nested.last_mut()
-                        .ok_or_else(|| ConfigError::InvalidProperty(line, token.to_owned()))?;
-                }
                 last.nested.push(section);
                 last = last.nested.last_mut().unwrap();
 
@@ -212,23 +229,35 @@ impl Config {
         Self::parse(file)
     }
 
-    fn dump_section<W: Write>(&self, dst: &mut W, level: usize) -> io::Result<()> {
-        if level > 0 {
-            writeln!(dst, "\n{0:#>1$} {2}", "", level, &self.name)?;
-        }
+    fn dump_section<W: Write>(&self, dst: &mut W, level: &mut String) -> io::Result<()> {
         for p in &self.properties {
             writeln!(dst, "{} = {}", &p.name, &p.value)?;
         }
-        for s in &self.nested {
-            s.dump_section(dst, level + 1)?;
+
+        if ! self.nested.is_empty() {
+            let level_skip = level.len();
+
+            if ! self.name.is_empty() {
+                level.push_str(&self.name);
+                level.push('/');
+            }
+
+            for s in &self.nested {
+                writeln!(dst, "\n[{}{}]", level, &s.name)?;
+                s.dump_section(dst, level)?;
+            }
+
+            level.truncate(level_skip);
         }
+
         Ok(())
     }
 
     /// Serializes config
     #[inline]
     pub fn dump<W: Write>(&self, dst: &mut W) -> Result<()> {
-        self.dump_section(dst, 0)?;
+        let mut level = String::with_capacity(256);
+        self.dump_section(dst, &mut level)?;
         Ok(())
     }
 

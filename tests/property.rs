@@ -21,9 +21,11 @@ wrong-format
 
 const WL: &str = r#"
 ok = true
-# ok-level
+[ok]
 ok = true
-### wrong-level
+[ok/level]
+ok = true
+[wrong/level]
 "#;
 
 
