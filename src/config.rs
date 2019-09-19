@@ -13,16 +13,17 @@ use std::{
 
 
 #[derive(Debug, Error)]
+#[error_prefix = "Config"]
 pub enum ConfigError {
-    #[error_from("Config IO: {}", 0)]
+    #[error_from]
     Io(io::Error),
-    #[error_kind("Config: invalid key '{}' at line {}", 1, 0)]
+    #[error_kind("invalid key '{}' at line {}", 1, 0)]
     InvalidKey(usize, String),
-    #[error_kind("Config: invalid property '{}' at line {}", 1, 0)]
+    #[error_kind("invalid property '{}' at line {}", 1, 0)]
     InvalidProperty(usize, String),
-    #[error_kind("Config: invalid format at line {}", 0)]
+    #[error_kind("invalid format at line {}", 0)]
     InvalidFormat(usize),
-    #[error_kind("Config: missing required property '{}' at line {}", 1, 0)]
+    #[error_kind("missing required property '{}' at line {}", 1, 0)]
     MissingProperty(usize, String),
 }
 
@@ -125,24 +126,14 @@ impl Config {
         None
     }
 
-    /// Returns property string value
-    #[inline]
-    pub fn get_str<'a>(&'a self, name: &str) -> Option<&'a str> {
-        self.get_property(name).map(|v| v.value.as_str())
-    }
-
     /// Returns property typed value (boolean or numbers)
     #[inline]
-    pub fn get<F>(&self, name: &str, opt: F) -> Result<F>
+    pub fn get<'a, F>(&'a self, name: &str) -> Option<F>
     where
-        F: FromProperty,
+        F: FromProperty<'a>,
     {
-        let value = match self.get_property(name) {
-            Some(v) => FromProperty::from_property(v)?,
-            None => opt,
-        };
-
-        Ok(value)
+        self.get_property(name)
+            .and_then(|v| FromProperty::from_property(v).ok())
     }
 
     /// Returns nested sections iterator
@@ -272,14 +263,22 @@ impl Config {
 
 
 /// A trait to abstract creating a new instance of a type from a Property
-pub trait FromProperty: Sized {
-    fn from_property(p: &Property) -> Result<Self>;
+pub trait FromProperty<'a>: Sized {
+    fn from_property(p: &'a Property) -> Result<Self>;
 }
 
 
-impl FromProperty for bool {
+impl<'a> FromProperty<'a> for &'a str {
     #[inline]
-    fn from_property(p: &Property) -> Result<bool> {
+    fn from_property(p: &'a Property) -> Result<&'a str> {
+        Ok(p.value.as_str())
+    }
+}
+
+
+impl<'a> FromProperty<'a> for bool {
+    #[inline]
+    fn from_property(p: &'a Property) -> Result<bool> {
         let value = p.value.parse::<bool>()
             .map_err(|_| ConfigError::InvalidProperty(p.line, p.name.to_owned()))?;
         Ok(value)
@@ -289,9 +288,9 @@ impl FromProperty for bool {
 
 macro_rules! impl_get_number {
     ( $( $t:tt ),* ) => {
-        $( impl FromProperty for $t {
+        $( impl<'a> FromProperty<'a> for $t {
             #[inline]
-            fn from_property(p: &Property) -> Result<$t> {
+            fn from_property(p: &'a Property) -> Result<$t> {
                 let (skip, radix) = if p.value.starts_with("0x") { (2, 16u32) } else { (0, 10u32) };
                 let value = $t::from_str_radix(&p.value[skip ..], radix)
                     .map_err(|_| ConfigError::InvalidProperty(p.line, p.name.to_owned()))?;
