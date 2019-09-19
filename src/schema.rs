@@ -13,7 +13,7 @@ use crate::config::{
 };
 
 
-pub struct Validator(Option<Box<Fn(&str) -> bool>>);
+pub struct Validator(Option<Box<dyn Fn(&str) -> bool>>);
 
 
 struct Property {
@@ -33,9 +33,9 @@ pub struct Schema {
 }
 
 
-impl From<Option<Box<Fn(&str) -> bool>>> for Validator {
+impl From<Option<Box<dyn Fn(&str) -> bool>>> for Validator {
     #[inline]
-    fn from(f: Option<Box<Fn(&str) -> bool>>) -> Validator {
+    fn from(f: Option<Box<dyn Fn(&str) -> bool>>) -> Validator {
         Validator(f)
     }
 }
