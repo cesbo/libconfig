@@ -64,7 +64,7 @@ impl Property {
 ///
 /// ## Comments
 ///
-/// Comment line should be started with `;`. Example: `; comment`
+/// Comment line should be started with `#`. Example: `# comment`
 ///
 pub struct Config {
     line: usize,
@@ -159,7 +159,8 @@ impl Config {
             line += 1;
 
             let token = buffer.trim_start();
-            if token.is_empty() || token.starts_with(';') {
+            // TODO: `;` - deprecated
+            if token.is_empty() || token.starts_with('#') || token.starts_with(';') {
                 continue;
             }
 

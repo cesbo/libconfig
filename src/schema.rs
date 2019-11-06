@@ -127,7 +127,7 @@ impl Schema {
 
     fn info_section(&self, result: &mut String, level: &mut String) -> fmt::Result {
         if ! self.description.is_empty() {
-            writeln!(result, "; {}", self.description)?;
+            writeln!(result, "# {}", self.description)?;
         }
 
         for item in &self.properties {
