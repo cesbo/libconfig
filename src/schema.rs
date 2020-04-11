@@ -125,29 +125,24 @@ impl Schema {
         Ok(())
     }
 
-    fn info_section(&self, result: &mut String, level: &mut String) -> fmt::Result {
+    fn info_section(&self, result: &mut String, level: usize) -> fmt::Result {
         if ! self.description.is_empty() {
-            writeln!(result, "# {}", self.description)?;
+            writeln!(result, "{:level$}# {}\n", "", self.description, level = level)?;
         }
 
         for item in &self.properties {
-            writeln!(result, "{} = {}", &item.name, &item.description)?;
+            writeln!(result,
+                "{:level$}{} = {}",
+                "",
+                &item.name,
+                &item.description,
+                level = level)?;
         }
 
-        if ! self.nested.is_empty() {
-            let level_skip = level.len();
-
-            if ! self.name.is_empty() {
-                level.push_str(&self.name);
-                level.push('/');
-            }
-
-            for s in &self.nested {
-                writeln!(result, "\n[{}{}]", level, &s.name)?;
-                s.info_section(result, level)?;
-            }
-
-            level.truncate(level_skip);
+        for s in &self.nested {
+            writeln!(result, "\n{:level$}{} {{", "", s.name, level = level)?;
+            s.info_section(result, level + 4)?;
+            writeln!(result, "{:level$}}}", "", level = level)?;
         }
 
         Ok(())
@@ -155,9 +150,8 @@ impl Schema {
 
     /// Returns information about schema parameters and nested schemas
     pub fn info(&mut self) -> String {
-        let mut level = String::with_capacity(256);
         let mut result = String::new();
-        self.info_section(&mut result, &mut level).unwrap();
+        self.info_section(&mut result, 0).unwrap();
         result
     }
 
