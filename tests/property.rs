@@ -20,16 +20,6 @@ wrong-format
 "#;
 
 
-const WL: &str = r#"
-ok = true
-[ok]
-ok = true
-[ok/level]
-ok = true
-[wrong/level]
-"#;
-
-
 #[test]
 fn test_property_bool_true() {
     let config = Config::parse(T1.as_bytes()).unwrap();
@@ -104,15 +94,6 @@ fn test_property_str() {
 #[test]
 fn test_wrong_format() {
     match Config::parse(WF.as_bytes()) {
-        Ok(_) => unreachable!(),
-        Err(e) => println!("{}", e),
-    }
-}
-
-
-#[test]
-fn test_wrong_level() {
-    match Config::parse(WL.as_bytes()) {
         Ok(_) => unreachable!(),
         Err(e) => println!("{}", e),
     }

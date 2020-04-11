@@ -47,7 +47,7 @@ impl Property {
 }
 
 
-/// Ini-inspired configuration format
+/// Configuration format
 ///
 /// ## Properties
 ///
@@ -57,10 +57,9 @@ impl Property {
 ///
 /// ## Sections
 ///
-/// Section is a group of properties. The section name should be wraped into `[]` symbols.
-/// Example: `[section]`. All keys after the section declaration are associated with that section.
-/// Sections could be nested. The nested section name should starts with parent section name and
-/// separated by `/` symbol. Example: [section/nested]`
+/// Section is a group of properties.
+/// Example: `section { ... }`.
+/// Sections could be nested.
 ///
 /// ## Comments
 ///
@@ -140,6 +139,56 @@ impl Config {
     #[inline]
     pub fn iter(&self) -> impl Iterator<Item = &Config> { self.nested.iter() }
 
+    fn parse_section<R: BufRead>(src: &mut R, buffer: &mut String, line: &mut usize) -> Result<Config> {
+        let mut section = Config::new("");
+
+        loop {
+            buffer.clear();
+
+            if src.read_line(buffer)? == 0 {
+                break
+            }
+
+            *line += 1;
+
+            let token = buffer.trim_start();
+
+            if token.is_empty() || token.starts_with('#') {
+                continue;
+            }
+
+            if token.starts_with('}') {
+                break;
+            }
+
+            let skip = token.find(char::is_whitespace)
+                .ok_or_else(|| ConfigError::InvalidFormat(*line))?;
+
+            let name = token[.. skip].to_string();
+            let token = token[skip ..].trim_start();
+
+            if token.starts_with('=') {
+                section.properties.push(Property {
+                    line: *line,
+                    name,
+                    value: (&token[1 ..]).trim().to_string(),
+                });
+            }
+
+            else if token.starts_with('{') {
+                let mut s = Config::parse_section(src, buffer, line)?;
+                s.name = name;
+                section.nested.push(s);
+            }
+
+            else {
+                return Err(ConfigError::InvalidFormat(*line));
+            }
+        }
+
+        Ok(section)
+    }
+
     /// Deserialize config
     pub fn parse<R: Read>(src: R) -> Result<Config> {
         let mut line = 0;
@@ -147,71 +196,7 @@ impl Config {
         let mut reader = BufReader::new(src);
         let mut buffer = String::new();
 
-        let mut root = Config::new("");
-        let mut last = &mut root;
-
-        loop {
-            buffer.clear();
-            if reader.read_line(&mut buffer)? == 0 {
-                break
-            }
-
-            line += 1;
-
-            let token = buffer.trim_start();
-            // TODO: `;` - deprecated
-            if token.is_empty() || token.starts_with('#') || token.starts_with(';') {
-                continue;
-            }
-
-            if token.starts_with('[') {
-                /* Config */
-
-                let token = (&token[1 ..]).trim_start(); /* skip [ */
-                let end = token.find(']').ok_or_else(|| ConfigError::InvalidFormat(line))?;
-                let token = (&token[.. end]).trim_end(); /* ignore ] */
-
-                let mut skip = 0;
-                last = &mut root;
-
-                loop {
-                    let next = token[skip ..].find('/').map_or(0, |v| v + skip);
-                    if next == 0 { break }
-                    let item = &token[skip .. next];
-                    skip = next + 1;
-
-                    last = last.nested.last_mut()
-                        .ok_or_else(|| ConfigError::InvalidKey(line, token.to_owned()))?;
-
-                    if last.name != item {
-                        return Err(ConfigError::InvalidKey(line, token.to_owned()));
-                    }
-                }
-
-                let section = Config {
-                    line,
-                    name: token[skip ..].to_owned(),
-                    properties: Vec::new(),
-                    nested: Vec::new(),
-                };
-
-                last.nested.push(section);
-                last = last.nested.last_mut().unwrap();
-
-                continue;
-            }
-
-            let skip = token.find('=')
-                .ok_or_else(|| ConfigError::InvalidFormat(line))?;
-
-            last.properties.push(Property {
-                line,
-                name: (&token[.. skip]).trim_end().to_owned(),
-                value: (&token[skip + 1 ..]).trim().to_owned(),
-            });
-        }
-
-        Ok(root)
+        Config::parse_section(&mut reader, &mut buffer, &mut line)
     }
 
     /// Opens config file
@@ -221,25 +206,15 @@ impl Config {
         Self::parse(file)
     }
 
-    fn dump_section<W: Write>(&self, dst: &mut W, level: &mut String) -> io::Result<()> {
+    fn dump_section<W: Write>(&self, dst: &mut W, level: usize) -> io::Result<()> {
         for p in &self.properties {
-            writeln!(dst, "{} = {}", &p.name, &p.value)?;
+            writeln!(dst, "{:level$}{} = {}", "", &p.name, &p.value, level = level)?;
         }
 
-        if ! self.nested.is_empty() {
-            let level_skip = level.len();
-
-            if ! self.name.is_empty() {
-                level.push_str(&self.name);
-                level.push('/');
-            }
-
-            for s in &self.nested {
-                writeln!(dst, "\n[{}{}]", level, &s.name)?;
-                s.dump_section(dst, level)?;
-            }
-
-            level.truncate(level_skip);
+        for s in &self.nested {
+            writeln!(dst, "\n{:level$}{} {{", "", &s.name, level = level)?;
+            s.dump_section(dst, level + 4)?;
+            writeln!(dst, "{:level$}}}", "", level = level)?;
         }
 
         Ok(())
@@ -248,8 +223,7 @@ impl Config {
     /// Serializes config
     #[inline]
     pub fn dump<W: Write>(&self, dst: &mut W) -> Result<()> {
-        let mut level = String::with_capacity(256);
-        self.dump_section(dst, &mut level)?;
+        self.dump_section(dst, 0)?;
         Ok(())
     }
 
